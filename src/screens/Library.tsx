@@ -22,7 +22,7 @@ export function Library() {
       <header className="flex items-center justify-between mb-4 gap-3">
         <div className="flex items-center gap-3">
           <Link
-            to="/"
+            to="/home"
             aria-label="Back home"
             className="grid place-items-center h-10 w-10 rounded-2xl text-white/70 hover:text-white hover:bg-ink-800 transition-colors"
           >

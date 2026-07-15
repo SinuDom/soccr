@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { ProgressRing } from './ProgressRing';
 import { formatClock } from './PracticeClock';
 import { Icon, type IconName } from './Icon';
+import { playFinishedChime } from '@/lib/chime';
 
 type Phase = 'idle' | 'running' | 'paused' | 'done';
 
@@ -88,6 +89,7 @@ export function DrillTimer({ seconds, index, label: customLabel, onChange, onAct
         setRemainingMs(0);
         setPhase('done');
         setCompletedOnce(true);
+        playFinishedChime();
         return;
       }
       setRemainingMs(left);

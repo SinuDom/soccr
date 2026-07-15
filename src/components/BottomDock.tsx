@@ -27,7 +27,7 @@ export function BottomDock({ disabled = false, extraLocked }: { disabled?: boole
       aria-label="Primary"
     >
       <div className="pointer-events-auto mx-auto flex max-w-md items-end justify-between rounded-3xl border border-ink-700 bg-ink-900/95 px-3 py-2 shadow-dock backdrop-blur">
-        <Tab icon="home" label="Home" active={pathname === '/'} onClick={() => nav('/')} />
+        <Tab icon="home" label="Home" active={pathname === '/home'} onClick={() => nav('/home')} />
         <Tab icon="list" label="Library" active={pathname === '/library'} onClick={() => nav('/library')} />
 
         <StartButton

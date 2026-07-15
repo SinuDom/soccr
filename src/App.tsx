@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useContentStore } from '@/store/contentStore';
 import { useProgressStore } from '@/store/progressStore';
 import { Home } from '@/screens/Home';
+import { ProfileSelect } from '@/screens/ProfileSelect';
 import { SessionScreen } from '@/screens/Session';
 import { SessionComplete } from '@/screens/SessionComplete';
 import { Library } from '@/screens/Library';
@@ -73,7 +74,8 @@ function AppRoutes() {
         transition={{ type: 'spring', stiffness: 260, damping: 26 }}
       >
         <Routes location={location}>
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={<ProfileSelect />} />
+          <Route path="/home" element={<Home />} />
           <Route path="/session/:mode" element={<SessionScreen />} />
           <Route path="/session/complete" element={<SessionComplete />} />
           <Route path="/library" element={<Library />} />

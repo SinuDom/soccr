@@ -54,7 +54,7 @@ export function SessionComplete() {
         transition={{ delay: 0.35 }}
         className="w-full max-w-sm space-y-3"
       >
-        <Link to="/"><Button variant="primary" size="lg" fullWidth icon="home">Home</Button></Link>
+        <Link to="/home"><Button variant="primary" size="lg" fullWidth icon="home">Home</Button></Link>
         <Link to="/shop"><Button variant="ghost" size="md" fullWidth icon="bag">Visit shop</Button></Link>
       </motion.div>
     </div>

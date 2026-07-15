@@ -6,7 +6,6 @@ import { useContentStore, getUser } from '@/store/contentStore';
 import { Button } from '@/components/Button';
 import { Icon } from '@/components/Icon';
 import { StreakFlame } from '@/components/StreakFlame';
-import { UserSwitcher } from '@/components/UserSwitcher';
 import { BottomDock } from '@/components/BottomDock';
 import { ExtraTimeButton } from '@/components/ExtraTimeButton';
 import { toLocalDateString } from '@/lib/domain/streak';
@@ -40,20 +39,23 @@ export function Home() {
           <h1 className="text-3xl font-black tracking-tight">Soccr</h1>
           <p className="text-white/60 text-sm">Watch. Drill. Keep the streak.</p>
         </div>
-        <Link
-          to="/settings"
-          aria-label="Settings"
-          className="grid place-items-center h-11 w-11 rounded-2xl text-white/70 hover:text-white hover:bg-ink-800 transition-colors"
-        >
-          <Icon name="settings" size={22} />
-        </Link>
-      </motion.header>
-
-      {content && content.users.length > 0 && (
-        <div className="mb-4">
-          <UserSwitcher users={content.users} />
+        <div className="flex items-center gap-2">
+          <Link
+            to="/"
+            aria-label="Switch profile"
+            className="grid place-items-center h-11 w-11 rounded-2xl text-white/70 hover:text-white hover:bg-ink-800 transition-colors"
+          >
+            <Icon name="user" size={22} />
+          </Link>
+          <Link
+            to="/settings"
+            aria-label="Settings"
+            className="grid place-items-center h-11 w-11 rounded-2xl text-white/70 hover:text-white hover:bg-ink-800 transition-colors"
+          >
+            <Icon name="settings" size={22} />
+          </Link>
         </div>
-      )}
+      </motion.header>
 
       {(freezeConsumedNotice || streakResetNotice) && (
         <motion.div

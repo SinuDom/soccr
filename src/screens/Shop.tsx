@@ -24,7 +24,7 @@ export function Shop() {
     <div className="min-h-dvh max-w-xl lg:max-w-2xl mx-auto p-5 pt-8 pb-28 lg:pb-8 w-full">
       <header className="flex items-center gap-3 mb-6">
         <Link
-          to="/"
+          to="/home"
           aria-label="Back home"
           className="grid place-items-center h-10 w-10 rounded-2xl text-white/70 hover:text-white hover:bg-ink-800 transition-colors"
         >

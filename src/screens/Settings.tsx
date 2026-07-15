@@ -62,7 +62,7 @@ export function Settings() {
     <div className="min-h-dvh lg:h-dvh lg:overflow-hidden max-w-xl lg:max-w-4xl mx-auto p-5 pt-8 lg:pt-6 w-full lg:flex lg:flex-col">
       <header className="flex items-center gap-3 mb-6 lg:mb-4 shrink-0">
         <Link
-          to="/"
+          to="/home"
           aria-label="Back home"
           className="grid place-items-center h-10 w-10 rounded-2xl text-white/70 hover:text-white hover:bg-ink-800 transition-colors"
         >
