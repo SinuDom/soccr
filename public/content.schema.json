@@ -1,0 +1,51 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Content Schema",
+  "type": "object",
+  "required": ["settings", "users"],
+  "properties": {
+    "settings": {
+      "type": "object",
+      "required": [
+        "sessionTargetMinutes",
+        "pointsPerExtraMinute",
+        "freezeCostPoints",
+        "maxFreezesHeld",
+        "recycleWhenLibraryExhausted"
+      ],
+      "properties": {
+        "sessionTargetMinutes": { "type": "integer", "minimum": 1 },
+        "pointsPerExtraMinute": { "type": "integer", "minimum": 0 },
+        "freezeCostPoints": { "type": "integer", "minimum": 0 },
+        "maxFreezesHeld": { "type": "integer", "minimum": 0 },
+        "recycleWhenLibraryExhausted": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "users": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "videos"],
+        "properties": {
+          "name": { "type": "string" },
+          "videos": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["url", "title"],
+              "properties": {
+                "url": { "type": "string", "format": "uri" },
+                "title": { "type": "string" },
+                "description": { "type": "string" }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

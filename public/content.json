@@ -1,4 +1,5 @@
 {
+  "$schema": "./content.schema.json",
   "settings": {
     "sessionTargetMinutes": 10,
     "pointsPerExtraMinute": 9,
