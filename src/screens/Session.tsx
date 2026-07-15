@@ -32,6 +32,8 @@ export function SessionScreen() {
   const params = useParams<Params>();
   const mode: SessionMode = params.mode === 'daily' ? 'daily' : 'extra';
   const manualId = useMemo(() => new URLSearchParams(window.location.search).get('video') ?? null, []);
+  // Library "play" links pass ?lib=1: just play the video, no drill timers.
+  const libraryMode = useMemo(() => new URLSearchParams(window.location.search).get('lib') === '1', []);
   const effectiveMode: SessionMode = manualId ? 'manual' : mode;
 
   const content = useContentStore((s) => s.content);
@@ -183,12 +185,12 @@ export function SessionScreen() {
   const handleNext = useCallback(() => {
     if (!session) return;
     const v = libraryVideos.find((x) => x.id === session.activeVideoId);
-    if (v?.timer && !drillsAllDone) {
+    if (!libraryMode && v?.timer && !drillsAllDone) {
       setConfirmNext(true);
       return;
     }
     proceedNext();
-  }, [session, libraryVideos, drillsAllDone, proceedNext]);
+  }, [session, libraryVideos, drillsAllDone, proceedNext, libraryMode]);
 
   // Reset the "all drills done" flag whenever we move to a new video.
   useEffect(() => {
@@ -201,7 +203,9 @@ export function SessionScreen() {
   useEffect(() => {
     if (!session || session.phase !== 'practicing') return;
     const v = libraryVideos.find((x) => x.id === session.activeVideoId);
-    if (!v || v.timer) return;
+    // In library mode we never run drill timers, so the wall clock always drives
+    // the session; otherwise it only kicks in for videos without a timer.
+    if (!v || (v.timer && !libraryMode)) return;
     const start = Date.now();
     let raf = 0;
     const loop = () => {
@@ -279,6 +283,7 @@ export function SessionScreen() {
               loadFailed={loadFailed}
               mode={effectiveMode}
               activeVideo={activeVideo}
+              libraryMode={libraryMode}
             />
           ) : null}
         </AnimatePresence>
@@ -410,6 +415,7 @@ function PracticeArea({
   loadFailed,
   mode,
   activeVideo,
+  libraryMode,
 }: {
   session: Session;
   targetMs: number | null;
@@ -422,6 +428,7 @@ function PracticeArea({
   loadFailed: boolean;
   mode: SessionMode;
   activeVideo: VideoRef;
+  libraryMode: boolean;
 }) {
   const total = totalPracticeMs(session);
   // Vertical Shorts get a narrower, portrait-friendly column so they don't sit
@@ -487,14 +494,17 @@ function PracticeArea({
           </div>
         )}
 
-        {/* Primary focus: the per-drill countdown timer(s). */}
-        <DrillTimers
-          seconds={activeVideo.timer}
-          repetition={activeVideo.repetition}
-          titles={activeVideo.timerTitles}
-          onElapsedChange={onDrillElapsedChange}
-          onAllDoneChange={onDrillAllDoneChange}
-        />
+        {/* Primary focus: the per-drill countdown timer(s). In library mode we
+            only play the video, so the drill timers are not shown. */}
+        {!libraryMode && (
+          <DrillTimers
+            seconds={activeVideo.timer}
+            repetition={activeVideo.repetition}
+            titles={activeVideo.timerTitles}
+            onElapsedChange={onDrillElapsedChange}
+            onAllDoneChange={onDrillAllDoneChange}
+          />
+        )}
 
         <div className="w-full max-w-sm space-y-2 lg:space-y-3 lg:pt-2">
           <Button variant="primary" size="lg" fullWidth iconRight="arrow-right" onClick={onNext}>

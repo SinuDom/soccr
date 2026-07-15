@@ -77,7 +77,7 @@ export function Library() {
                   size="md"
                   iconOnly
                   icon="play"
-                  onClick={() => nav(`/session/extra?video=${encodeURIComponent(v.id)}`)}
+                  onClick={() => nav(`/session/extra?video=${encodeURIComponent(v.id)}&lib=1`)}
                 >
                   Play {v.title}
                 </Button>
