@@ -1,6 +1,6 @@
 {
   "settings": {
-    "sessionTargetMinutes": 2,
+    "sessionTargetMinutes": 10,
     "pointsPerExtraMinute": 9,
     "freezeCostPoints": 100,
     "maxFreezesHeld": 1,
