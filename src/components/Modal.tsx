@@ -23,7 +23,7 @@ export function Modal({ open, onClose, title, children, footer }: Props) {
         >
           <motion.div
             key="panel"
-            className="w-full sm:max-w-lg bg-ink-800 rounded-t-3xl sm:rounded-3xl p-6 sm:p-7 shadow-2xl border border-ink-700"
+            className="w-full sm:max-w-lg bg-white rounded-t-3xl sm:rounded-3xl p-6 sm:p-7 shadow-2xl border border-slate-200"
             initial={{ y: 40, opacity: 0.5 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 40, opacity: 0 }}
@@ -34,7 +34,7 @@ export function Modal({ open, onClose, title, children, footer }: Props) {
             aria-label={title}
           >
             <h2 className="text-xl font-bold mb-3">{title}</h2>
-            <div className="text-white/90">{children}</div>
+            <div className="text-slate-600">{children}</div>
             {footer ? <div className="mt-6 flex gap-3 justify-end flex-wrap">{footer}</div> : null}
           </motion.div>
         </motion.div>

@@ -11,11 +11,17 @@ body {
   overscroll-behavior-y: none;
   -webkit-tap-highlight-color: transparent;
   font-family: theme('fontFamily.display');
-  background: theme('colors.ink.950');
-  color: white;
+  background: theme('colors.canvas');
+  color: theme('colors.slate.900');
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 /* Prevent iOS Safari from zooming when tapping big buttons. */
 button, [role="button"] { touch-action: manipulation; }
 
 .tabular { font-variant-numeric: tabular-nums; }
+
+/* Respects the iOS home-indicator / notch when pinning UI to screen edges. */
+.pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+.bottom-safe { bottom: calc(env(safe-area-inset-bottom) + 0.75rem); }

@@ -5,6 +5,7 @@ import { useContentStore } from '@/store/contentStore';
 import { useProgressStore } from '@/store/progressStore';
 import { Button } from '@/components/Button';
 import { Icon } from '@/components/Icon';
+import { BottomDock } from '@/components/BottomDock';
 
 export function Shop() {
   const content = useContentStore((s) => s.content);
@@ -20,25 +21,25 @@ export function Shop() {
   const notEnough = progress.points < cost;
 
   return (
-    <div className="min-h-dvh max-w-xl lg:max-w-2xl mx-auto p-5 pt-8 w-full">
+    <div className="min-h-dvh max-w-xl lg:max-w-2xl mx-auto p-5 pt-8 pb-28 lg:pb-8 w-full">
       <header className="flex items-center gap-3 mb-6">
         <Link
           to="/"
           aria-label="Back home"
-          className="grid place-items-center h-10 w-10 rounded-2xl text-white/70 hover:text-white hover:bg-ink-800 transition-colors"
+          className="grid place-items-center h-10 w-10 rounded-2xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
         >
           <Icon name="arrow-left" size={20} />
         </Link>
         <h1 className="text-2xl font-black tracking-tight">Shop</h1>
       </header>
 
-      <section className="rounded-3xl bg-ink-800 border border-ink-700 p-6 mb-6 flex items-center justify-between">
+      <section className="rounded-4xl bg-white border border-slate-200 shadow-card p-6 mb-6 flex items-center justify-between">
         <div>
-          <div className="text-xs uppercase tracking-widest text-white/60">Points</div>
+          <div className="text-xs uppercase tracking-widest text-slate-500">Points</div>
           <div className="text-4xl font-black tabular">{progress.points}</div>
         </div>
         <div className="text-right">
-          <div className="text-xs uppercase tracking-widest text-white/60">Freezes held</div>
+          <div className="text-xs uppercase tracking-widest text-slate-500">Freezes held</div>
           <div className="text-2xl font-bold">{progress.freezesHeld} / {content.settings.maxFreezesHeld}</div>
         </div>
       </section>
@@ -47,19 +48,19 @@ export function Shop() {
         initial={false}
         animate={bought && !reduced ? { scale: [1, 1.04, 1], boxShadow: ['0 0 0 rgba(127,215,255,0)', '0 0 60px rgba(127,215,255,0.5)', '0 0 0 rgba(127,215,255,0)'] } : undefined}
         transition={{ duration: 0.8 }}
-        className="rounded-3xl bg-ink-800 border border-ice-500/40 p-6"
+        className="rounded-4xl bg-white border border-ice-500/40 shadow-card p-6"
       >
         <div className="flex items-center gap-4 mb-4">
-          <div className="grid place-items-center h-14 w-14 rounded-2xl bg-ice-500/15 text-ice-400">
+          <div className="grid place-items-center h-14 w-14 rounded-2xl bg-ice-500/15 text-ice-600">
             <Icon name="snowflake" size={30} />
           </div>
           <div>
             <h2 className="text-xl font-bold">Streak Freeze</h2>
-            <p className="text-white/60 text-sm">Saves your streak the next time you miss a day.</p>
+            <p className="text-slate-500 text-sm">Saves your streak the next time you miss a day.</p>
           </div>
         </div>
         <div className="flex items-center justify-between">
-          <div className="text-flame-400 font-bold">Cost: {cost} pts</div>
+          <div className="text-flame-600 font-bold">Cost: {cost} pts</div>
           <Button
             variant="ice"
             size="lg"
@@ -75,12 +76,14 @@ export function Shop() {
             {atMax ? `Max ${content.settings.maxFreezesHeld} held` : 'Buy freeze'}
           </Button>
         </div>
-        {error && <div className="mt-3 text-sm text-red-300">{error}</div>}
+        {error && <div className="mt-3 text-sm text-red-600">{error}</div>}
       </motion.section>
 
-      <p className="text-white/40 text-xs mt-8 text-center">
+      <p className="text-slate-400 text-xs mt-8 text-center">
         Earn points by practicing in Extra Time or by hand-picking videos from the Library.
       </p>
+
+      <BottomDock />
     </div>
   );
 }

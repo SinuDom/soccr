@@ -17,11 +17,11 @@ interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variants: Record<Variant, string> = {
-  primary: 'bg-pitch-500 hover:bg-pitch-400 active:bg-pitch-600 text-ink-950 shadow-glow',
-  secondary: 'bg-ink-700 hover:bg-ink-600 text-white border border-ink-600',
-  danger: 'bg-red-600 hover:bg-red-500 text-white',
-  ghost: 'bg-transparent hover:bg-ink-800 text-white',
-  ice: 'bg-ice-500 hover:bg-ice-400 text-ink-950',
+  primary: 'bg-pitch-600 hover:bg-pitch-500 active:bg-pitch-700 text-white shadow-glow',
+  secondary: 'bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-800 border border-slate-200 shadow-card',
+  danger: 'bg-red-600 hover:bg-red-500 text-white shadow-card',
+  ghost: 'bg-transparent hover:bg-slate-100 text-slate-600',
+  ice: 'bg-ice-500 hover:bg-ice-400 active:bg-ice-600 text-white shadow-card',
 };
 
 const sizes: Record<Size, string> = {
@@ -74,7 +74,7 @@ export const Button = forwardRef<HTMLButtonElement, Props>(function Button(
         'transition-[transform,background-color,box-shadow] duration-150 ease-out',
         'active:scale-[0.97] motion-reduce:transform-none motion-reduce:transition-none',
         'disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pitch-400 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-950',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pitch-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white',
         variants[variant],
         iconOnly ? iconOnlySizes[size] : sizes[size],
         fullWidth ? 'w-full' : '',

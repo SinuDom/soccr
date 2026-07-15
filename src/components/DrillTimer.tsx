@@ -83,18 +83,19 @@ export function DrillTimer({ seconds, index, label: customLabel, onRunningChange
   const label = customLabel ?? (index != null ? `Set ${index}` : 'Drill');
 
   return (
-    <div className="flex flex-col items-center gap-3">
-      <div className="text-white/50 text-[11px] uppercase tracking-widest">{label}</div>
+    <div className="flex flex-col items-center gap-4">
+      <div className="text-slate-500 text-xs font-semibold uppercase tracking-widest">{label}</div>
       <ProgressRing
         progress={progress}
-        size={132}
-        stroke={8}
-        color={phase === 'done' ? '#22d17a' : '#4aa8ff'}
+        size={168}
+        stroke={10}
+        color={phase === 'done' ? '#12b866' : '#3fb8ee'}
+        trackColor="#e2e8f0"
       >
         <div
           className={[
-            'font-mono tabular font-black leading-none tracking-tight text-3xl transition-colors',
-            phase === 'done' ? 'text-pitch-400' : 'text-white',
+            'font-mono tabular font-black leading-none tracking-tight text-4xl transition-colors',
+            phase === 'done' ? 'text-pitch-600' : 'text-slate-900',
           ].join(' ')}
         >
           {formatClock(remainingMs)}
@@ -135,8 +136,8 @@ function ControlButton({
 }) {
   const tone =
     kind === 'primary'
-      ? 'bg-pitch-500 hover:bg-pitch-400 active:bg-pitch-600 text-ink-950 shadow-glow'
-      : 'bg-ink-700 hover:bg-ink-600 text-white border border-ink-600';
+      ? 'bg-pitch-600 hover:bg-pitch-500 active:bg-pitch-700 text-white shadow-glow'
+      : 'bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-700 border border-slate-200 shadow-card';
   return (
     <button
       type="button"
@@ -144,14 +145,14 @@ function ControlButton({
       title={label}
       onClick={onClick}
       className={[
-        'grid place-items-center h-12 w-12 rounded-full',
+        'grid place-items-center h-14 w-14 rounded-full',
         'transition-[transform,background-color] duration-150 ease-out',
         'active:scale-90 motion-reduce:transform-none',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pitch-400 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-950',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pitch-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white',
         tone,
       ].join(' ')}
     >
-      <Icon name={icon} size={20} />
+      <Icon name={icon} size={22} />
     </button>
   );
 }
@@ -188,8 +189,8 @@ export function DrillTimers({
 
   return (
     <div className="w-full flex flex-col items-center gap-4">
-      <div className="text-white/60 text-sm uppercase tracking-widest">{heading}</div>
-      <div className="flex flex-wrap items-start justify-center gap-5 sm:gap-8">
+      <div className="text-slate-500 text-xs font-semibold uppercase tracking-widest">{heading}</div>
+      <div className="flex flex-wrap items-start justify-center gap-6 sm:gap-10">
         {Array.from({ length: count }, (_, i) => (
           <DrillTimer
             key={i}

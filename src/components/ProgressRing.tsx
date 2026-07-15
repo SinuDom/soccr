@@ -12,8 +12,8 @@ export function ProgressRing({
   progress,
   size = 220,
   stroke = 12,
-  color = '#22d17a',
-  trackColor = '#2a3444',
+  color = '#12b866',
+  trackColor = '#e2e8f0',
   children,
 }: Props) {
   const clamped = Math.max(0, Math.min(1, progress));

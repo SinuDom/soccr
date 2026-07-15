@@ -135,12 +135,12 @@ function IframeEmbedPlayer({ video, src, onEnded, onLoadError, loop }: Props & {
             onError={() => { setErrored(true); onLoadError(); }}
           />
         ) : (
-          <div className="w-full h-full grid place-items-center text-white/70">Couldn’t load embed.</div>
+          <div className="w-full h-full grid place-items-center text-slate-500">Couldn’t load embed.</div>
         )}
       </div>
       {!loop && onEnded && (
         <>
-          <p className="text-sm text-white/60 text-center px-4">
+          <p className="text-sm text-slate-500 text-center px-4">
             This platform doesn’t report when a clip finishes. Watch it, then tap:
           </p>
           <Button variant="ice" size="lg" fullWidth onClick={onEnded}>

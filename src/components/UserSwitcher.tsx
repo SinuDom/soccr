@@ -25,13 +25,13 @@ export function UserSwitcher({ users }: Props) {
   return (
     <>
       <button
-        className="flex items-center gap-2 rounded-full bg-ink-700 hover:bg-ink-600 border border-ink-600 px-3 py-1.5 text-sm transition-colors active:scale-[0.98]"
+        className="flex items-center gap-2 rounded-full bg-white hover:bg-slate-50 border border-slate-200 shadow-card px-3 py-1.5 text-sm transition-colors active:scale-[0.98]"
         onClick={() => setOpen(true)}
         aria-label="Switch user"
       >
         <Avatar name={active?.name ?? '?'} />
         <span className="font-semibold">{active?.name ?? 'Pick a user'}</span>
-        <Icon name="chevron-down" size={16} className="text-white/50" />
+        <Icon name="chevron-down" size={16} className="text-slate-400" />
       </button>
 
       <Modal open={open} onClose={() => setOpen(false)} title="Who's practicing?">
@@ -47,17 +47,17 @@ export function UserSwitcher({ users }: Props) {
                     'w-full flex items-center gap-3 rounded-2xl border p-3 transition-colors',
                     isActive
                       ? 'bg-pitch-500/15 border-pitch-500/50'
-                      : 'bg-ink-700 hover:bg-ink-600 border-ink-600',
+                      : 'bg-slate-100 hover:bg-slate-200 border-slate-200',
                   ].join(' ')}
                 >
                   <Avatar name={u.name} large />
                   <div className="flex-1 text-left">
                     <div className="font-bold">{u.name}</div>
-                    <div className="text-white/60 text-xs">
+                    <div className="text-slate-500 text-xs">
                       {u.videos.length} videos · streak {p?.currentStreak ?? 0} · {p?.points ?? 0} pts
                     </div>
                   </div>
-                  {isActive && <Icon name="check" size={18} className="text-pitch-400" />}
+                  {isActive && <Icon name="check" size={18} className="text-pitch-600" />}
                 </button>
               </li>
             );

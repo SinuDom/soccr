@@ -27,11 +27,11 @@ export function SessionComplete() {
       >
         {mode === 'daily' ? (
           <>
-            <p className="uppercase tracking-widest text-pitch-400 text-sm mb-2">Daily goal complete</p>
+            <p className="uppercase tracking-widest text-pitch-600 text-sm mb-2">Daily goal complete</p>
             <StreakFlame streak={streak} large />
           </>
         ) : (
-          <p className="uppercase tracking-widest text-ice-400 text-sm">Extra time banked</p>
+          <p className="uppercase tracking-widest text-ice-600 text-sm">Extra time banked</p>
         )}
       </motion.div>
 
@@ -39,12 +39,12 @@ export function SessionComplete() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.15 }}
-        className="rounded-3xl bg-ink-800 border border-ink-700 px-8 py-6 mb-6"
+        className="rounded-4xl bg-white border border-slate-200 shadow-card px-8 py-6 mb-6"
       >
-        <div className="text-white/60 uppercase tracking-widest text-xs mb-1">Practice time</div>
-        <div className="text-5xl font-black tabular">{minutes}<span className="text-white/40 text-2xl">m</span> {String(seconds).padStart(2, '0')}<span className="text-white/40 text-2xl">s</span></div>
+        <div className="text-slate-500 uppercase tracking-widest text-xs mb-1">Practice time</div>
+        <div className="text-5xl font-black tabular">{minutes}<span className="text-slate-400 text-2xl">m</span> {String(seconds).padStart(2, '0')}<span className="text-slate-400 text-2xl">s</span></div>
         {mode !== 'daily' && (
-          <div className="mt-3 text-flame-400 font-bold">+{pts} points (balance {points})</div>
+          <div className="mt-3 text-flame-600 font-bold">+{pts} points (balance {points})</div>
         )}
       </motion.div>
 
