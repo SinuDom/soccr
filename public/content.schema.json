@@ -4,6 +4,7 @@
   "type": "object",
   "required": ["settings", "users"],
   "properties": {
+    "$schema": { "type": "string" },
     "settings": {
       "type": "object",
       "required": [
