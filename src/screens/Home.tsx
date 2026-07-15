@@ -8,6 +8,7 @@ import { Icon } from '@/components/Icon';
 import { StreakFlame } from '@/components/StreakFlame';
 import { UserSwitcher } from '@/components/UserSwitcher';
 import { BottomDock } from '@/components/BottomDock';
+import { ExtraTimeButton } from '@/components/ExtraTimeButton';
 import { toLocalDateString } from '@/lib/domain/streak';
 
 export function Home() {
@@ -106,9 +107,11 @@ export function Home() {
           Start daily session
         </Button>
         <div className="grid grid-cols-2 gap-3">
-          <Button variant="secondary" size="lg" icon="plus" onClick={() => nav('/session/extra')} disabled={libSize === 0}>
-            Extra time
-          </Button>
+          <ExtraTimeButton
+            locked={!doneToday}
+            disabled={libSize === 0}
+            onStart={() => nav('/session/extra')}
+          />
           <Button variant="secondary" size="lg" icon="list" onClick={() => nav('/library')}>
             Library
           </Button>
@@ -132,7 +135,7 @@ export function Home() {
           : 'Loading library…'}
       </footer>
 
-      <BottomDock disabled={libSize === 0} />
+      <BottomDock disabled={libSize === 0} extraLocked={!doneToday} />
     </div>
   );
 }

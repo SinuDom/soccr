@@ -12,8 +12,14 @@ interface Props {
   index?: number;
   /** Custom label for this individual timer; overrides the default "Set N"/"Drill". */
   label?: string;
-  /** Fired whenever this timer starts/stops counting down. */
-  onRunningChange?: (running: boolean) => void;
+  /**
+   * Fired whenever this timer's contribution changes. `elapsedMs` is the amount
+   * of drill time this timer currently contributes to the session (0 while idle
+   * or after a reset, the elapsed portion while running/paused, the full
+   * duration once done). `completedOnce` is true once it has reached zero at
+   * least once (it stays true even after a reset).
+   */
+  onChange?: (elapsedMs: number, completedOnce: boolean) => void;
   /** Diameter of the countdown ring in px (shrinks on small screens). */
   size?: number;
 }
@@ -24,22 +30,28 @@ interface Props {
  * much time is left. It can be paused/resumed while running and, when it
  * reaches zero, flips to a "done" state and can be run again.
  */
-export function DrillTimer({ seconds, index, label: customLabel, onRunningChange, size = 132 }: Props) {
+export function DrillTimer({ seconds, index, label: customLabel, onChange, size = 132 }: Props) {
   const totalMs = Math.max(1, Math.round(seconds * 1000));
   const [phase, setPhase] = useState<Phase>('idle');
   const [remainingMs, setRemainingMs] = useState(totalMs);
+  const [completedOnce, setCompletedOnce] = useState(false);
   const endAtRef = useRef<number>(0);
 
   // Reset if the drill duration changes (e.g. moving to another video).
   useEffect(() => {
     setPhase('idle');
     setRemainingMs(totalMs);
+    setCompletedOnce(false);
   }, [totalMs]);
 
-  // Let the parent know whether this timer is actively counting down.
+  // Report this timer's contribution to the session. Idle/reset contributes
+  // nothing; running/paused contributes the elapsed portion; done contributes
+  // the full duration. This drives the live session progress bar and lets a
+  // reset subtract its time again.
   useEffect(() => {
-    onRunningChange?.(phase === 'running');
-  }, [phase, onRunningChange]);
+    const elapsed = phase === 'idle' ? 0 : totalMs - remainingMs;
+    onChange?.(Math.max(0, elapsed), completedOnce);
+  }, [remainingMs, phase, completedOnce, totalMs, onChange]);
 
   useEffect(() => {
     if (phase !== 'running') return;
@@ -49,6 +61,7 @@ export function DrillTimer({ seconds, index, label: customLabel, onRunningChange
       if (left <= 0) {
         setRemainingMs(0);
         setPhase('done');
+        setCompletedOnce(true);
         return;
       }
       setRemainingMs(left);
@@ -161,21 +174,41 @@ function ControlButton({
 
 /**
  * Renders one DrillTimer per repetition, laid out next to each other. Returns
- * null when the active drill has no timer configured. Reports whether any of
- * the child timers is currently counting down via `onRunningChange`.
+ * null when the active drill has no timer configured.
+ *
+ * It aggregates the child timers and reports:
+ *  - `onElapsedChange`: the summed drill time contributed by all timers (so
+ *    completing every timer credits the sum of their durations, and a reset
+ *    subtracts that timer's time again).
+ *  - `onAllDoneChange`: whether every timer has been finished at least once.
  */
 export function DrillTimers({
   seconds,
   repetition,
   titles,
-  onRunningChange,
+  onElapsedChange,
+  onAllDoneChange,
 }: {
   seconds?: number;
   repetition?: number;
   titles?: string[];
-  onRunningChange?: (running: boolean) => void;
+  onElapsedChange?: (elapsedMs: number) => void;
+  onAllDoneChange?: (allDone: boolean) => void;
 }) {
-  const runningCountRef = useRef(0);
+  const count = seconds && seconds >= 1 ? Math.max(1, Math.floor(repetition ?? 1)) : 0;
+
+  const elapsedRef = useRef<number[]>([]);
+  const doneRef = useRef<boolean[]>([]);
+
+  // Reset the per-timer bookkeeping whenever the drill layout changes (e.g.
+  // moving to another video) so stale contributions don't leak across drills.
+  useEffect(() => {
+    elapsedRef.current = Array(count).fill(0);
+    doneRef.current = Array(count).fill(false);
+    onElapsedChange?.(0);
+    onAllDoneChange?.(count === 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [count, seconds]);
 
   // Rings are large on desktop/iPad but shrink on phones so a full drill (video
   // + timers + controls) fits one portrait screen without scrolling.
@@ -188,17 +221,20 @@ export function DrillTimers({
     return () => mq.removeEventListener('change', apply);
   }, []);
 
-  const handleChildRunning = useCallback(
-    (running: boolean) => {
-      runningCountRef.current = Math.max(0, runningCountRef.current + (running ? 1 : -1));
-      onRunningChange?.(runningCountRef.current > 0);
+  const handleChildChange = useCallback(
+    (i: number, elapsedMs: number, completedOnce: boolean) => {
+      elapsedRef.current[i] = elapsedMs;
+      doneRef.current[i] = completedOnce;
+      const sum = elapsedRef.current.reduce((a, b) => a + b, 0);
+      onElapsedChange?.(sum);
+      const allDone = doneRef.current.length > 0 && doneRef.current.every(Boolean);
+      onAllDoneChange?.(allDone);
     },
-    [onRunningChange],
+    [onElapsedChange, onAllDoneChange],
   );
 
-  if (!seconds || seconds < 1) return null;
-  const count = Math.max(1, Math.floor(repetition ?? 1));
-  const heading = count > 1 ? `${count} × ${formatClock(seconds * 1000)} drill` : 'Drill timer';
+  if (count === 0) return null;
+  const heading = count > 1 ? `${count} × ${formatClock((seconds ?? 0) * 1000)} drill` : 'Drill timer';
 
   return (
     <div className="w-full flex flex-col items-center gap-3 sm:gap-4">
@@ -207,11 +243,11 @@ export function DrillTimers({
         {Array.from({ length: count }, (_, i) => (
           <DrillTimer
             key={i}
-            seconds={seconds}
+            seconds={seconds!}
             index={count > 1 ? i + 1 : undefined}
             label={titles?.[i]}
             size={ringSize}
-            onRunningChange={handleChildRunning}
+            onChange={(elapsedMs, completedOnce) => handleChildChange(i, elapsedMs, completedOnce)}
           />
         ))}
       </div>

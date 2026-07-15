@@ -8,7 +8,7 @@ import { markSeen as markSeenPure, pickNextVideo } from '@/lib/domain/selection'
 import {
   endEarly,
   pressNext,
-  setDrillRunning,
+  setActiveMs,
   startSession,
   stopExtra,
   tickDaily,
@@ -17,7 +17,6 @@ import {
   type Session,
 } from '@/lib/domain/session';
 import { toLocalDateString } from '@/lib/domain/streak';
-import { elapsedNow, startClock } from '@/lib/domain/practiceClock';
 import { PracticeClock } from '@/components/PracticeClock';
 import { DrillTimers } from '@/components/DrillTimer';
 import { Button } from '@/components/Button';
@@ -48,6 +47,8 @@ export function SessionScreen() {
 
   const [session, setSession] = useState<Session | null>(null);
   const [confirmEnd, setConfirmEnd] = useState(false);
+  const [confirmNext, setConfirmNext] = useState(false);
+  const [drillsAllDone, setDrillsAllDone] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
   const [showIntro, setShowIntro] = useState(true);
   const startedAtRef = useRef<number>(0);
@@ -85,16 +86,6 @@ export function SessionScreen() {
     return () => clearTimeout(t);
   }, [session === null]);
 
-  useEffect(() => {
-    if (!session || session.phase !== 'practicing' || session.mode !== 'daily') return;
-    let raf = 0;
-    const loop = () => {
-      setSession((s) => (s ? tickDaily(s, Date.now()) : s));
-      raf = requestAnimationFrame(loop);
-    };
-    raf = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(raf);
-  }, [session?.phase, session?.mode]);
 
   useEffect(() => {
     if (!session || session.phase !== 'done') return;
@@ -138,10 +129,21 @@ export function SessionScreen() {
     }
   }, [content, creditDaily, bankExtraTime, markSeenAction, nav]);
 
-  // The session clock is driven by the per-drill timers: it only runs while at
-  // least one drill timer is counting down.
-  const handleDrillRunningChange = useCallback((running: boolean) => {
-    setSession((s) => (s ? setDrillRunning(s, running, Date.now()) : s));
+  // The session time is driven by the per-drill timers: as they count down (and
+  // when they complete) they report their summed contribution, which we record
+  // as the active video's practice time. In daily mode reaching the target then
+  // auto-ends the session. This makes the progress bar update live, credits the
+  // sum of all timers, and lets a reset subtract time again.
+  const handleDrillElapsed = useCallback((ms: number) => {
+    setSession((s) => {
+      if (!s) return s;
+      const ns = setActiveMs(s, ms);
+      return ns.mode === 'daily' ? tickDaily(ns) : ns;
+    });
+  }, []);
+
+  const handleAllDoneChange = useCallback((allDone: boolean) => {
+    setDrillsAllDone(allDone);
   }, []);
 
   const handleLoadError = useCallback(() => { setLoadFailed(true); }, []);
@@ -160,8 +162,9 @@ export function SessionScreen() {
     setSession((s) => (s ? { ...s, activeVideoId: r.videoId!, phase: 'practicing' } : s));
   }, [content, session, libraryVideos, progress.seenVideoIds, progress.cycleNumber, advanceCycle]);
 
-  const handleNext = useCallback(() => {
+  const proceedNext = useCallback(() => {
     if (!content || !session) return;
+    setConfirmNext(false);
     setLoadFailed(false);
     markSeenAction(session.activeVideoId);
     const libIds = libraryVideos.map((v) => v.id);
@@ -172,27 +175,47 @@ export function SessionScreen() {
     });
     if (r.cycleAdvanced) advanceCycle(r.nextSeenIds, r.nextCycleNumber);
     if (!r.videoId) return;
-    setSession((s) => (s ? pressNext(s, r.videoId!, Date.now()).session : s));
+    setSession((s) => (s ? pressNext(s, r.videoId!).session : s));
   }, [content, session, libraryVideos, progress.seenVideoIds, progress.cycleNumber, advanceCycle, markSeenAction]);
 
-  // Videos without a configured drill timer have nothing to drive the clock, so
-  // fall back to auto-running it once the video finishes (previous behaviour).
+  // If the active video has drill timers and the user hasn't finished all of
+  // them at least once, confirm before moving on; otherwise proceed directly.
+  const handleNext = useCallback(() => {
+    if (!session) return;
+    const v = libraryVideos.find((x) => x.id === session.activeVideoId);
+    if (v?.timer && !drillsAllDone) {
+      setConfirmNext(true);
+      return;
+    }
+    proceedNext();
+  }, [session, libraryVideos, drillsAllDone, proceedNext]);
+
+  // Reset the "all drills done" flag whenever we move to a new video.
+  useEffect(() => {
+    setDrillsAllDone(false);
+  }, [session?.activeVideoId]);
+
+  // Videos without a configured drill timer have nothing to drive the session
+  // time, so fall back to a wall clock that runs for as long as the video is
+  // the active drill (matching the previous auto-run behaviour).
   useEffect(() => {
     if (!session || session.phase !== 'practicing') return;
     const v = libraryVideos.find((x) => x.id === session.activeVideoId);
-    if (v && !v.timer) {
-      setSession((s) =>
-        s && s.phase === 'practicing' && s.clock.status !== 'running'
-          ? { ...s, clock: startClock(s.clock, Date.now()) }
-          : s,
-      );
-    }
+    if (!v || v.timer) return;
+    const start = Date.now();
+    let raf = 0;
+    const loop = () => {
+      handleDrillElapsed(Date.now() - start);
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.phase, session?.activeVideoId]);
 
   const handleStop = useCallback(() => {
     if (!session) return;
-    setSession((s) => (s ? stopExtra(s, Date.now()) : s));
+    setSession((s) => (s ? stopExtra(s) : s));
   }, [session]);
 
   const handleEndEarly = useCallback(() => {
@@ -250,7 +273,8 @@ export function SessionScreen() {
               onNext={handleNext}
               onStop={handleStop}
               onSkip={handleSkip}
-              onDrillRunningChange={handleDrillRunningChange}
+              onDrillElapsedChange={handleDrillElapsed}
+              onDrillAllDoneChange={handleAllDoneChange}
               onLoadError={handleLoadError}
               loadFailed={loadFailed}
               mode={effectiveMode}
@@ -298,6 +322,20 @@ export function SessionScreen() {
         {session.mode === 'daily'
           ? 'Ending early cancels this session — no streak credit, no points, this practice time won’t count.'
           : 'Ending early discards the current round. Use “Stop” instead if you want your practice time to bank into points.'}
+      </Modal>
+
+      <Modal
+        open={confirmNext}
+        onClose={() => setConfirmNext(false)}
+        title="Move to the next video?"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setConfirmNext(false)}>Keep drilling</Button>
+            <Button variant="primary" onClick={proceedNext}>Next anyway</Button>
+          </>
+        }
+      >
+        You haven’t finished all of this drill’s timers yet. Are you sure you want to move on?
       </Modal>
     </div>
   );
@@ -366,7 +404,8 @@ function PracticeArea({
   onNext,
   onStop,
   onSkip,
-  onDrillRunningChange,
+  onDrillElapsedChange,
+  onDrillAllDoneChange,
   onLoadError,
   loadFailed,
   mode,
@@ -377,23 +416,14 @@ function PracticeArea({
   onNext: () => void;
   onStop: () => void;
   onSkip: () => void;
-  onDrillRunningChange: (running: boolean) => void;
+  onDrillElapsedChange: (elapsedMs: number) => void;
+  onDrillAllDoneChange: (allDone: boolean) => void;
   onLoadError: () => void;
   loadFailed: boolean;
   mode: SessionMode;
   activeVideo: VideoRef;
 }) {
-  const [, force] = useState(0);
-  useEffect(() => {
-    let raf = 0;
-    const loop = () => { force((n) => (n + 1) & 0xffff); raf = requestAnimationFrame(loop); };
-    raf = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(raf);
-  }, []);
-
-  const now = Date.now();
-  const total = totalPracticeMs(session, now);
-  const roundElapsed = elapsedNow(session.clock, now);
+  const total = totalPracticeMs(session);
   // Vertical Shorts get a narrower, portrait-friendly column so they don't sit
   // letterboxed inside a wide 16:9 slot like long-form clips.
   const isShort = isYouTubeShort(activeVideo.url);
@@ -453,11 +483,7 @@ function PracticeArea({
             Extra/manual keep the numberless practice clock. */}
         {!targetMs && (
           <div className="opacity-70 scale-[0.6] -my-2 lg:my-0 lg:scale-75">
-            <PracticeClock
-              elapsedMs={roundElapsed + session.rounds.reduce((a, r) => a + r.practiceMs, 0)}
-              running
-              compact
-            />
+            <PracticeClock elapsedMs={total} running compact />
           </div>
         )}
 
@@ -466,7 +492,8 @@ function PracticeArea({
           seconds={activeVideo.timer}
           repetition={activeVideo.repetition}
           titles={activeVideo.timerTitles}
-          onRunningChange={onDrillRunningChange}
+          onElapsedChange={onDrillElapsedChange}
+          onAllDoneChange={onDrillAllDoneChange}
         />
 
         <div className="w-full max-w-sm space-y-2 lg:space-y-3 lg:pt-2">
