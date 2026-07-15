@@ -22,7 +22,7 @@ export function StreakFlame({ streak, large }: Props) {
       </motion.div>
       <div className="flex items-baseline gap-2">
         <span className={`tabular ${numClass}`}>{streak}</span>
-        <span className="text-slate-500 uppercase tracking-widest text-xs">day{streak === 1 ? '' : 's'}</span>
+        <span className="text-white/60 uppercase tracking-widest text-xs">day{streak === 1 ? '' : 's'}</span>
       </div>
     </div>
   );

@@ -204,7 +204,7 @@ export function SessionScreen() {
     );
   }
   if (!session) {
-    return <div className="min-h-dvh grid place-items-center text-slate-500">Loading…</div>;
+    return <div className="min-h-dvh grid place-items-center text-white/70">Loading…</div>;
   }
 
   const activeVideo = libraryVideos.find((v) => v.id === session.activeVideoId) as VideoRef | undefined;
@@ -220,7 +220,7 @@ export function SessionScreen() {
   }
 
   return (
-    <div className="min-h-dvh flex flex-col p-4 sm:p-6 max-w-2xl lg:max-w-5xl mx-auto w-full">
+    <div className="h-dvh overflow-hidden lg:h-auto lg:min-h-dvh lg:overflow-visible flex flex-col p-3 sm:p-6 max-w-2xl lg:max-w-5xl mx-auto w-full">
       <SessionHeader
         session={session}
         targetMs={targetMs}
@@ -228,7 +228,7 @@ export function SessionScreen() {
         onQuit={() => setConfirmEnd(true)}
       />
 
-      <div className="mt-4">
+      <div className="mt-3 flex-1 min-h-0 flex flex-col lg:mt-4 lg:block">
         {session.phase === 'practicing' ? (
           <PracticeArea
             session={session}
@@ -278,17 +278,17 @@ function SessionHeader({
         iconOnly
         icon="close"
         onClick={onQuit}
-        className="text-slate-500"
+        className="text-white/70"
       >
         End session
       </Button>
       <div className="flex-1 text-center">
         <div className="text-sm font-semibold leading-tight">{userName}</div>
-        <div className="text-[11px] uppercase tracking-widest text-slate-400">{modeLabel}</div>
+        <div className="text-[11px] uppercase tracking-widest text-white/45">{modeLabel}</div>
       </div>
       <div className="min-w-[3.5rem] text-right">
         <div className="text-lg font-black tabular leading-none">{session.rounds.length}</div>
-        <div className="text-[10px] uppercase tracking-widest text-slate-400">done</div>
+        <div className="text-[10px] uppercase tracking-widest text-white/45">done</div>
       </div>
     </header>
   );
@@ -335,45 +335,49 @@ function PracticeArea({
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: 'spring', stiffness: 220, damping: 24 }}
-      className="mt-4 grid gap-6 lg:grid-cols-2 lg:items-start lg:gap-10"
+      className="flex h-full min-h-0 flex-col gap-3 lg:grid lg:h-auto lg:grid-cols-2 lg:items-start lg:gap-10"
     >
-      {/* LEFT COLUMN — the looping clip and what you're drilling. */}
-      <div className="flex flex-col gap-4">
+      {/* LEFT / TOP — the looping clip and what you’re drilling. On phones the
+          clip flexes to fill leftover height so the whole drill fits one screen. */}
+      <div className="flex min-h-0 flex-1 flex-col gap-2 lg:flex-none lg:gap-4">
         {loadFailed ? (
           <div className="w-full rounded-2xl bg-red-500/10 border border-red-500/40 p-6 text-center">
-            <p className="text-red-600 mb-4">This video didn’t load.</p>
+            <p className="text-red-200 mb-4">This video didn’t load.</p>
             <Button variant="secondary" icon="skip" onClick={onSkip}>Skip to another</Button>
           </div>
         ) : (
-          <VideoPlayer
-            key={activeVideo.id}
-            video={activeVideo}
-            onLoadError={onLoadError}
-            loop
-          />
+          <div className="min-h-0 flex-1 lg:flex-none lg:aspect-video">
+            <VideoPlayer
+              key={activeVideo.id}
+              video={activeVideo}
+              onLoadError={onLoadError}
+              loop
+              fit
+            />
+          </div>
         )}
 
-        <div className="text-center lg:text-left px-1">
-          <div className="text-slate-400 text-[11px] uppercase tracking-widest">Now drilling</div>
-          <div className="font-bold text-slate-900 text-lg lg:text-xl leading-snug">{activeVideo.title}</div>
+        <div className="shrink-0 text-center lg:text-left px-1">
+          <div className="text-white/45 text-[10px] lg:text-[11px] uppercase tracking-widest">Now drilling</div>
+          <div className="font-bold text-white text-base lg:text-xl leading-snug line-clamp-1 lg:line-clamp-none">{activeVideo.title}</div>
           {activeVideo.description && (
-            <p className="text-slate-500 text-sm mt-1 leading-relaxed">{activeVideo.description}</p>
+            <p className="hidden lg:block text-white/60 text-sm mt-1 leading-relaxed">{activeVideo.description}</p>
           )}
         </div>
       </div>
 
-      {/* RIGHT COLUMN — the primary drill timer(s), plus a glanceable session
-          indicator and the flow controls. All sit on a prominent card so the
-          drill is comfortably large on desktop/iPad screens. */}
-      <div className="flex flex-col items-center gap-6 rounded-4xl bg-white border border-slate-200 shadow-card p-6 lg:p-10">
+      {/* RIGHT / BOTTOM — the primary drill timer(s), a glanceable session
+          indicator and the flow controls. Fixed height so the clip above can
+          flex to fill the rest of a portrait screen. */}
+      <div className="flex shrink-0 flex-col items-center gap-3 lg:gap-6">
         {/* Secondary, glanceable session indicator — no numbers to focus on. */}
         {targetMs ? (
-          <div className="flex items-center gap-2 text-slate-400">
-            <ProgressRing progress={ringProgress} size={40} stroke={5} color="#94a3b8" trackColor="#e2e8f0" />
+          <div className="flex items-center gap-2 text-white/40">
+            <ProgressRing progress={ringProgress} size={34} stroke={5} color="#8b93a1" trackColor="#2a3444" />
             <span className="text-[10px] uppercase tracking-widest">session</span>
           </div>
         ) : (
-          <div className="opacity-80 scale-75">
+          <div className="opacity-70 scale-[0.6] -my-2 lg:my-0 lg:scale-75">
             <PracticeClock
               elapsedMs={roundElapsed + session.rounds.reduce((a, r) => a + r.practiceMs, 0)}
               running
@@ -390,12 +394,12 @@ function PracticeArea({
           onRunningChange={onDrillRunningChange}
         />
 
-        <div className="w-full max-w-sm space-y-3 pt-2">
-          <Button variant="primary" size="xl" fullWidth iconRight="arrow-right" onClick={onNext}>
+        <div className="w-full max-w-sm space-y-2 lg:space-y-3 lg:pt-2">
+          <Button variant="primary" size="lg" fullWidth iconRight="arrow-right" onClick={onNext}>
             Next video
           </Button>
           {mode !== 'daily' && (
-            <Button variant="ice" size="lg" fullWidth icon="stop" onClick={onStop}>
+            <Button variant="ice" size="md" fullWidth icon="stop" onClick={onStop}>
               Stop · bank {formatMin(total)}
             </Button>
           )}

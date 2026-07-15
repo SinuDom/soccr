@@ -11,15 +11,18 @@ interface Props {
   onLoadError: () => void;
   /** When true, the clip loops continuously (used while drilling). */
   loop?: boolean;
+  /** When true, the media fills its parent's height (used to fit small screens
+   *  without scrolling) instead of enforcing its own aspect-ratio box. */
+  fit?: boolean;
 }
 
 /** Dispatch by platform. All embeds are official; we never scrape or re-host. */
-export function VideoPlayer({ video, onEnded, onLoadError, loop }: Props) {
+export function VideoPlayer({ video, onEnded, onLoadError, loop, fit }: Props) {
   switch (video.platform) {
-    case 'youtube':  return <YouTubePlayer video={video} onEnded={onEnded} onLoadError={onLoadError} loop={loop} />;
-    case 'instagram': return <IframeEmbedPlayer video={video} src={instagramEmbedUrl(video.url)} onEnded={onEnded} onLoadError={onLoadError} loop={loop} />;
-    case 'tiktok':    return <IframeEmbedPlayer video={video} src={tiktokEmbedUrl(video.url)} onEnded={onEnded} onLoadError={onLoadError} loop={loop} />;
-    default:          return <IframeEmbedPlayer video={video} src={video.url} onEnded={onEnded} onLoadError={onLoadError} loop={loop} />;
+    case 'youtube':  return <YouTubePlayer video={video} onEnded={onEnded} onLoadError={onLoadError} loop={loop} fit={fit} />;
+    case 'instagram': return <IframeEmbedPlayer video={video} src={instagramEmbedUrl(video.url)} onEnded={onEnded} onLoadError={onLoadError} loop={loop} fit={fit} />;
+    case 'tiktok':    return <IframeEmbedPlayer video={video} src={tiktokEmbedUrl(video.url)} onEnded={onEnded} onLoadError={onLoadError} loop={loop} fit={fit} />;
+    default:          return <IframeEmbedPlayer video={video} src={video.url} onEnded={onEnded} onLoadError={onLoadError} loop={loop} fit={fit} />;
   }
 }
 
@@ -52,7 +55,7 @@ function loadYouTubeApi(): Promise<void> {
   return ytApiPromise;
 }
 
-function YouTubePlayer({ video, onEnded, onLoadError, loop }: Props) {
+function YouTubePlayer({ video, onEnded, onLoadError, loop, fit }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<any>(null);
   const videoId = useMemo(() => extractYouTubeId(video.url), [video.url]);
@@ -91,8 +94,13 @@ function YouTubePlayer({ video, onEnded, onLoadError, loop }: Props) {
   }, [videoId]);
 
   return (
-    <div className="w-full max-w-2xl mx-auto">
-      <div className="aspect-video rounded-2xl overflow-hidden bg-black shadow-lg">
+    <div className={fit ? 'w-full h-full' : 'w-full max-w-2xl mx-auto'}>
+      <div
+        className={[
+          'rounded-2xl overflow-hidden bg-black shadow-lg',
+          fit ? 'w-full h-full' : 'aspect-video',
+        ].join(' ')}
+      >
         <div ref={containerRef} className="w-full h-full" />
       </div>
     </div>
@@ -101,7 +109,7 @@ function YouTubePlayer({ video, onEnded, onLoadError, loop }: Props) {
 
 // ---------- Instagram / TikTok / other (iframe + "Done watching") ----------
 
-function IframeEmbedPlayer({ video, src, onEnded, onLoadError, loop }: Props & { src: string | null }) {
+function IframeEmbedPlayer({ video, src, onEnded, onLoadError, loop, fit }: Props & { src: string | null }) {
   const [loaded, setLoaded] = useState(false);
   const [errored, setErrored] = useState(false);
 
@@ -116,10 +124,11 @@ function IframeEmbedPlayer({ video, src, onEnded, onLoadError, loop }: Props & {
   const isPortraitLikely = video.platform === 'instagram' || video.platform === 'tiktok';
 
   return (
-    <div className="w-full max-w-md mx-auto flex flex-col items-center gap-4">
+    <div className={['mx-auto flex flex-col items-center gap-4', fit ? 'w-full h-full' : 'w-full max-w-md'].join(' ')}>
       <div
         className={[
-          'w-full rounded-2xl overflow-hidden bg-black shadow-lg',
+          'rounded-2xl overflow-hidden bg-black shadow-lg',
+          fit ? 'h-full max-w-full' : 'w-full',
           isPortraitLikely ? 'aspect-[9/16]' : 'aspect-video',
         ].join(' ')}
       >
@@ -135,12 +144,12 @@ function IframeEmbedPlayer({ video, src, onEnded, onLoadError, loop }: Props & {
             onError={() => { setErrored(true); onLoadError(); }}
           />
         ) : (
-          <div className="w-full h-full grid place-items-center text-slate-500">Couldn’t load embed.</div>
+          <div className="w-full h-full grid place-items-center text-white/70">Couldn’t load embed.</div>
         )}
       </div>
       {!loop && onEnded && (
         <>
-          <p className="text-sm text-slate-500 text-center px-4">
+          <p className="text-sm text-white/60 text-center px-4">
             This platform doesn’t report when a clip finishes. Watch it, then tap:
           </p>
           <Button variant="ice" size="lg" fullWidth onClick={onEnded}>

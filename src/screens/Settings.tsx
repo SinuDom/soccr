@@ -64,7 +64,7 @@ export function Settings() {
         <Link
           to="/"
           aria-label="Back home"
-          className="grid place-items-center h-10 w-10 rounded-2xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+          className="grid place-items-center h-10 w-10 rounded-2xl text-white/70 hover:text-white hover:bg-ink-800 transition-colors"
         >
           <Icon name="arrow-left" size={20} />
         </Link>
@@ -72,7 +72,7 @@ export function Settings() {
       </header>
 
       {corrupted && (
-        <div className="rounded-2xl p-4 mb-4 bg-red-500/10 border border-red-500/40 text-red-600 text-sm">
+        <div className="rounded-2xl p-4 mb-4 bg-red-500/10 border border-red-500/40 text-red-200 text-sm">
           Your saved progress couldn't be read. Import a backup below to restore it, or reset to start fresh.
         </div>
       )}
@@ -84,10 +84,10 @@ export function Settings() {
               const p = vault.users[u.id];
               return (
                 <li key={u.id} className="flex items-center justify-between gap-2">
-                  <span className={u.id === activeUserId ? 'font-bold text-slate-900' : 'text-slate-600'}>
+                  <span className={u.id === activeUserId ? 'font-bold text-white' : 'text-white/80'}>
                     {u.name}{u.id === activeUserId ? ' (active)' : ''}
                   </span>
-                  <span className="text-slate-400 tabular text-xs">
+                  <span className="text-white/50 tabular text-xs">
                     {u.videos.length} videos · streak {p?.currentStreak ?? 0} · {p?.points ?? 0} pts
                   </span>
                 </li>
@@ -95,11 +95,11 @@ export function Settings() {
             })}
           </ul>
         ) : (
-          <p className="text-slate-500 text-sm">No users defined.</p>
+          <p className="text-white/60 text-sm">No users defined.</p>
         )}
-        <p className="text-slate-400 text-xs mt-3">
-          Add or remove users under <code className="rounded bg-slate-100 px-1">users</code> in
-          <code className="mx-1 rounded bg-slate-100 px-1">public/content.json</code>. Each user's progress is separate.
+        <p className="text-white/50 text-xs mt-3">
+          Add or remove users under <code className="rounded bg-black/40 px-1">users</code> in
+          <code className="mx-1 rounded bg-black/40 px-1">public/content.json</code>. Each user's progress is separate.
         </p>
       </Section>
 
@@ -113,7 +113,7 @@ export function Settings() {
             <SettingRow label="Recycle library" value={String(content.settings.recycleWhenLibraryExhausted)} />
           </dl>
         ) : (
-          <p className="text-slate-500 text-sm">Content not loaded.</p>
+          <p className="text-white/60 text-sm">Content not loaded.</p>
         )}
         <div className="mt-3">
           <Button variant="ghost" size="md" icon="refresh" onClick={() => void refetchContent()}>Re-fetch content.json</Button>
@@ -131,9 +131,9 @@ export function Settings() {
             onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFilePicked(f); e.target.value = ''; }}
           />
           <Button variant="secondary" size="lg" icon="upload" onClick={() => fileRef.current?.click()}>Import vault…</Button>
-          {importError && <div className="text-sm text-red-600">{importError}</div>}
+          {importError && <div className="text-sm text-red-300">{importError}</div>}
         </div>
-        <p className="text-slate-400 text-xs mt-3">
+        <p className="text-white/50 text-xs mt-3">
           One backup covers every user in the vault. Export on one device, import on another.
         </p>
       </Section>
@@ -179,8 +179,8 @@ export function Settings() {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-4xl bg-white border border-slate-200 shadow-card p-5 mb-4">
-      <h2 className="text-sm uppercase tracking-widest text-slate-500 mb-3">{title}</h2>
+    <section className="rounded-3xl bg-ink-800 border border-ink-700 p-5 mb-4">
+      <h2 className="text-sm uppercase tracking-widest text-white/60 mb-3">{title}</h2>
       {children}
     </section>
   );
@@ -189,7 +189,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function SettingRow({ label, value }: { label: string; value: string | number }) {
   return (
     <>
-      <dt className="text-slate-500">{label}</dt>
+      <dt className="text-white/60">{label}</dt>
       <dd className="text-right tabular font-semibold">{value}</dd>
     </>
   );

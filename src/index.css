@@ -11,10 +11,8 @@ body {
   overscroll-behavior-y: none;
   -webkit-tap-highlight-color: transparent;
   font-family: theme('fontFamily.display');
-  background: theme('colors.canvas');
-  color: theme('colors.slate.900');
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
+  background: theme('colors.ink.950');
+  color: white;
 }
 
 /* Prevent iOS Safari from zooming when tapping big buttons. */

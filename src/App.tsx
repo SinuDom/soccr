@@ -23,7 +23,7 @@ export function App() {
 function VersionBadge() {
   return (
     <span
-      className="fixed bottom-2 left-2 z-50 select-none text-[10px] leading-none text-slate-300 pointer-events-none"
+      className="fixed bottom-2 left-2 z-50 select-none text-[10px] leading-none text-white/30 pointer-events-none"
       aria-label={`App version ${__APP_VERSION__}`}
     >
       v{__APP_VERSION__}
@@ -52,7 +52,7 @@ function Boot() {
   }, [content, reconcile]);
 
   if (status === 'idle' || status === 'loading') {
-    return <div className="min-h-dvh grid place-items-center text-slate-500">Loading…</div>;
+    return <div className="min-h-dvh grid place-items-center text-white/60">Loading…</div>;
   }
   if (status === 'error' && error) {
     return <ErrorScreen error={error} onRetry={() => void load()} />;

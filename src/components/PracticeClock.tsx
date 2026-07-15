@@ -36,18 +36,18 @@ export function PracticeClock({ elapsedMs, targetMs, running, compact }: Props) 
         className={[
           'font-mono tabular font-black leading-none tracking-tight',
           compact ? 'text-clockSmall' : 'text-clock',
-          negative ? 'text-pitch-600' : 'text-slate-900',
+          negative ? 'text-pitch-400' : 'text-white',
         ].join(' ')}
         aria-live="off"
       >
         {formatClock(displayMs)}
       </div>
       {targetMs != null ? (
-        <div className="mt-2 text-slate-500 text-sm uppercase tracking-widest">
+        <div className="mt-2 text-white/60 text-sm uppercase tracking-widest">
           {overGoal ? 'goal complete' : 'countdown'}
         </div>
       ) : (
-        <div className="mt-2 text-slate-500 text-sm uppercase tracking-widest">extra time</div>
+        <div className="mt-2 text-white/60 text-sm uppercase tracking-widest">extra time</div>
       )}
     </div>
   );

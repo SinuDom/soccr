@@ -14,6 +14,8 @@ interface Props {
   label?: string;
   /** Fired whenever this timer starts/stops counting down. */
   onRunningChange?: (running: boolean) => void;
+  /** Diameter of the countdown ring in px (shrinks on small screens). */
+  size?: number;
 }
 
 /**
@@ -22,7 +24,7 @@ interface Props {
  * much time is left. It can be paused/resumed while running and, when it
  * reaches zero, flips to a "done" state and can be run again.
  */
-export function DrillTimer({ seconds, index, label: customLabel, onRunningChange }: Props) {
+export function DrillTimer({ seconds, index, label: customLabel, onRunningChange, size = 132 }: Props) {
   const totalMs = Math.max(1, Math.round(seconds * 1000));
   const [phase, setPhase] = useState<Phase>('idle');
   const [remainingMs, setRemainingMs] = useState(totalMs);
@@ -83,19 +85,19 @@ export function DrillTimer({ seconds, index, label: customLabel, onRunningChange
   const label = customLabel ?? (index != null ? `Set ${index}` : 'Drill');
 
   return (
-    <div className="flex flex-col items-center gap-4">
-      <div className="text-slate-500 text-xs font-semibold uppercase tracking-widest">{label}</div>
+    <div className="flex flex-col items-center gap-2 sm:gap-3">
+      <div className="text-white/50 text-[10px] sm:text-[11px] uppercase tracking-widest">{label}</div>
       <ProgressRing
         progress={progress}
-        size={168}
-        stroke={10}
-        color={phase === 'done' ? '#12b866' : '#3fb8ee'}
-        trackColor="#e2e8f0"
+        size={size}
+        stroke={size < 120 ? 7 : 8}
+        color={phase === 'done' ? '#22d17a' : '#4aa8ff'}
       >
         <div
           className={[
-            'font-mono tabular font-black leading-none tracking-tight text-4xl transition-colors',
-            phase === 'done' ? 'text-pitch-600' : 'text-slate-900',
+            'font-mono tabular font-black leading-none tracking-tight transition-colors',
+            size < 120 ? 'text-2xl' : 'text-3xl',
+            phase === 'done' ? 'text-pitch-400' : 'text-white',
           ].join(' ')}
         >
           {formatClock(remainingMs)}
@@ -136,8 +138,8 @@ function ControlButton({
 }) {
   const tone =
     kind === 'primary'
-      ? 'bg-pitch-600 hover:bg-pitch-500 active:bg-pitch-700 text-white shadow-glow'
-      : 'bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-700 border border-slate-200 shadow-card';
+      ? 'bg-pitch-500 hover:bg-pitch-400 active:bg-pitch-600 text-ink-950 shadow-glow'
+      : 'bg-ink-700 hover:bg-ink-600 text-white border border-ink-600';
   return (
     <button
       type="button"
@@ -145,14 +147,14 @@ function ControlButton({
       title={label}
       onClick={onClick}
       className={[
-        'grid place-items-center h-14 w-14 rounded-full',
+        'grid place-items-center h-12 w-12 rounded-full',
         'transition-[transform,background-color] duration-150 ease-out',
         'active:scale-90 motion-reduce:transform-none',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pitch-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pitch-400 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-950',
         tone,
       ].join(' ')}
     >
-      <Icon name={icon} size={22} />
+      <Icon name={icon} size={20} />
     </button>
   );
 }
@@ -175,6 +177,17 @@ export function DrillTimers({
 }) {
   const runningCountRef = useRef(0);
 
+  // Rings are large on desktop/iPad but shrink on phones so a full drill (video
+  // + timers + controls) fits one portrait screen without scrolling.
+  const [ringSize, setRingSize] = useState(132);
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const apply = () => setRingSize(mq.matches ? 132 : 96);
+    apply();
+    mq.addEventListener('change', apply);
+    return () => mq.removeEventListener('change', apply);
+  }, []);
+
   const handleChildRunning = useCallback(
     (running: boolean) => {
       runningCountRef.current = Math.max(0, runningCountRef.current + (running ? 1 : -1));
@@ -188,15 +201,16 @@ export function DrillTimers({
   const heading = count > 1 ? `${count} × ${formatClock(seconds * 1000)} drill` : 'Drill timer';
 
   return (
-    <div className="w-full flex flex-col items-center gap-4">
-      <div className="text-slate-500 text-xs font-semibold uppercase tracking-widest">{heading}</div>
-      <div className="flex flex-wrap items-start justify-center gap-6 sm:gap-10">
+    <div className="w-full flex flex-col items-center gap-3 sm:gap-4">
+      <div className="text-white/60 text-xs sm:text-sm uppercase tracking-widest">{heading}</div>
+      <div className="flex flex-wrap items-start justify-center gap-3 sm:gap-6 lg:gap-8">
         {Array.from({ length: count }, (_, i) => (
           <DrillTimer
             key={i}
             seconds={seconds}
             index={count > 1 ? i + 1 : undefined}
             label={titles?.[i]}
+            size={ringSize}
             onRunningChange={handleChildRunning}
           />
         ))}

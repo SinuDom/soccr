@@ -24,8 +24,8 @@ export function ErrorScreen({ error, onRetry }: Props) {
       <div className="max-w-md w-full text-center">
         <div className="text-6xl mb-4">⚠︎</div>
         <h1 className="text-2xl font-black mb-2">{headline}</h1>
-        <p className="text-slate-500 mb-4">{hint}</p>
-        <pre className="text-left text-xs bg-slate-100 border border-slate-200 rounded-xl p-3 mb-6 overflow-x-auto">
+        <p className="text-white/70 mb-4">{hint}</p>
+        <pre className="text-left text-xs bg-black/40 border border-ink-700 rounded-xl p-3 mb-6 overflow-x-auto">
           {error.message}
         </pre>
         <Button onClick={onRetry}>Try again</Button>
