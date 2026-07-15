@@ -69,10 +69,12 @@ function YouTubePlayer({ video, onEnded, onLoadError, loop, fit }: Props) {
     loadYouTubeApi().then(() => {
       if (cancelled || !containerRef.current || !window.YT) return;
       // `loop: 1` requires `playlist` to be the same id for a single video.
-      const loopVars = loop ? { loop: 1, playlist: videoId, autoplay: 1 } : {};
+      const loopVars = loop ? { loop: 1, playlist: videoId } : {};
+      // Autoplay as soon as the exercise page loads. Browsers only allow
+      // programmatic autoplay when the player is muted, so start muted.
       playerRef.current = new window.YT.Player(containerRef.current, {
         videoId,
-        playerVars: { playsinline: 1, rel: 0, modestbranding: 1, controls: 1, ...loopVars },
+        playerVars: { playsinline: 1, rel: 0, modestbranding: 1, controls: 1, autoplay: 1, mute: 1, ...loopVars },
         events: {
           onReady: () => { clearTimeout(watchdog); },
           onStateChange: (e: any) => {

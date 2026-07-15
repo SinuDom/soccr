@@ -203,9 +203,10 @@ export function SessionScreen() {
   useEffect(() => {
     if (!session || session.phase !== 'practicing') return;
     const v = libraryVideos.find((x) => x.id === session.activeVideoId);
-    // In library mode we never run drill timers, so the wall clock always drives
-    // the session; otherwise it only kicks in for videos without a timer.
-    if (!v || (v.timer && !libraryMode)) return;
+    // Library mode is "just play the video": it never tracks practice time, so
+    // the wall clock stays off entirely. Otherwise it only drives the session
+    // for videos that have no drill timer to report their own contribution.
+    if (!v || v.timer || libraryMode) return;
     const start = Date.now();
     let raf = 0;
     const loop = () => {
@@ -488,7 +489,7 @@ function PracticeArea({
       <div className="flex shrink-0 flex-col items-center gap-3 lg:gap-6">
         {/* Daily mode shows its goal as the top progress bar, so nothing here.
             Extra/manual keep the numberless practice clock. */}
-        {!targetMs && (
+        {!targetMs && !libraryMode && (
           <div className="opacity-70 scale-[0.6] -my-2 lg:my-0 lg:scale-75">
             <PracticeClock elapsedMs={total} running compact />
           </div>
@@ -510,7 +511,7 @@ function PracticeArea({
           <Button variant="primary" size="lg" fullWidth iconRight="arrow-right" onClick={onNext}>
             Next video
           </Button>
-          {mode !== 'daily' && (
+          {mode !== 'daily' && !libraryMode && (
             <Button variant="ice" size="md" fullWidth icon="stop" onClick={onStop}>
               Stop · bank {formatMin(total)}
             </Button>

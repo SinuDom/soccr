@@ -34,7 +34,6 @@ export function ProgressRing({
           fill="none"
           strokeDasharray={`${dash} ${c - dash}`}
           strokeLinecap="round"
-          style={{ transition: 'stroke-dasharray 200ms linear' }}
         />
       </svg>
       <div className="absolute inset-0 flex items-center justify-center">{children}</div>
