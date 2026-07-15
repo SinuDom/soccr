@@ -13,8 +13,18 @@
       "videos": [
         {
           "url": "https://www.youtube.com/shorts/--llBGWd4JA",
-          "title": "video 4",
+          "title": "Ball 1",
           "description": "Csinald mind a 3 gyakorlatot 2 percig."
+        },
+        {
+          "url": "https://www.youtube.com/shorts/_eraYN00_Vg",
+          "title": "Speed 1",
+          "description": "A palyat bolyakkal csinald."
+        },
+        {
+          "url": "https://www.youtube.com/shorts/V4Q4H7CXomM",
+          "title": "Ball 2",
+          "description": "Mind a 3 gyakorlatot 2 percig."
         }
       ]
     },
