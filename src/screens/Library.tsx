@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useContentStore, getUser } from '@/store/contentStore';
 import { useProgressStore } from '@/store/progressStore';
 import { Button } from '@/components/Button';
+import { Icon } from '@/components/Icon';
 
 export function Library() {
   const nav = useNavigate();
@@ -16,11 +17,17 @@ export function Library() {
   const videos = activeUser?.videos ?? [];
 
   return (
-    <div className="min-h-dvh max-w-2xl mx-auto p-5 pt-8 w-full flex flex-col">
-      <header className="flex items-center justify-between mb-4">
-        <div>
-          <Link to="/" className="text-white/60 text-sm">← Home</Link>
-          <h1 className="text-2xl font-black tracking-tight mt-1">
+    <div className="min-h-dvh max-w-2xl lg:max-w-4xl mx-auto p-5 pt-8 w-full flex flex-col">
+      <header className="flex items-center justify-between mb-4 gap-3">
+        <div className="flex items-center gap-3">
+          <Link
+            to="/"
+            aria-label="Back home"
+            className="grid place-items-center h-10 w-10 rounded-2xl text-white/70 hover:text-white hover:bg-ink-800 transition-colors"
+          >
+            <Icon name="arrow-left" size={20} />
+          </Link>
+          <h1 className="text-2xl font-black tracking-tight">
             {activeUser ? `${activeUser.name}'s library` : 'Library'}
           </h1>
         </div>
@@ -39,7 +46,7 @@ export function Library() {
           No videos for {activeUser?.name ?? 'this user'} yet.
         </div>
       ) : (
-        <ul className="space-y-2">
+        <ul className="space-y-2 lg:grid lg:grid-cols-2 lg:gap-2 lg:space-y-0">
           {videos.map((v, i) => {
             const isSeen = seenSet.has(v.id);
             return (
@@ -56,17 +63,22 @@ export function Library() {
                   {v.description && (
                     <div className="text-xs text-white/60 line-clamp-2 mt-0.5">{v.description}</div>
                   )}
-                  <a href={v.url} target="_blank" rel="noreferrer" className="text-xs text-white/40 truncate block hover:underline mt-0.5">
-                    {v.url}
+                  <a href={v.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-white/40 max-w-full hover:text-white/70 hover:underline mt-0.5">
+                    <Icon name="external" size={12} /> <span className="truncate">{v.url}</span>
                   </a>
                 </div>
                 {isSeen ? (
-                  <span className="text-xs text-pitch-400">seen</span>
+                  <span className="inline-flex items-center gap-1 text-xs text-pitch-400"><Icon name="check" size={13} /> seen</span>
                 ) : (
-                  <span className="text-xs text-flame-400">new</span>
+                  <span className="text-[10px] uppercase tracking-widest font-bold text-flame-400">new</span>
                 )}
-                <Button size="md" onClick={() => nav(`/session/extra?video=${encodeURIComponent(v.id)}`)}>
-                  Play
+                <Button
+                  size="md"
+                  iconOnly
+                  icon="play"
+                  onClick={() => nav(`/session/extra?video=${encodeURIComponent(v.id)}`)}
+                >
+                  Play {v.title}
                 </Button>
               </motion.li>
             );

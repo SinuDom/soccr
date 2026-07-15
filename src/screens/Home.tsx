@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { useProgressStore } from '@/store/progressStore';
 import { useContentStore, getUser } from '@/store/contentStore';
 import { Button } from '@/components/Button';
+import { Icon } from '@/components/Icon';
 import { StreakFlame } from '@/components/StreakFlame';
 import { UserSwitcher } from '@/components/UserSwitcher';
 import { toLocalDateString } from '@/lib/domain/streak';
@@ -26,7 +27,7 @@ export function Home() {
   }, [freezeConsumedNotice, streakResetNotice, dismissNotices]);
 
   return (
-    <div className="min-h-dvh flex flex-col p-5 pt-8 max-w-xl mx-auto w-full">
+    <div className="min-h-dvh flex flex-col p-5 pt-8 sm:pt-12 max-w-xl lg:max-w-2xl mx-auto w-full">
       <motion.header
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
@@ -37,7 +38,13 @@ export function Home() {
           <h1 className="text-3xl font-black tracking-tight">Soccr</h1>
           <p className="text-white/60 text-sm">Watch. Drill. Keep the streak.</p>
         </div>
-        <Link to="/settings" className="text-white/70 hover:text-white text-2xl" aria-label="Settings">⚙︎</Link>
+        <Link
+          to="/settings"
+          aria-label="Settings"
+          className="grid place-items-center h-11 w-11 rounded-2xl text-white/70 hover:text-white hover:bg-ink-800 transition-colors"
+        >
+          <Icon name="settings" size={22} />
+        </Link>
       </motion.header>
 
       {content && content.users.length > 0 && (
@@ -57,9 +64,12 @@ export function Home() {
               : 'bg-red-500/10 border-red-500/40 text-red-300',
           ].join(' ')}
         >
-          {freezeConsumedNotice
-            ? '❄︎ A freeze saved your streak. Back to it today!'
-            : 'Your streak reset. Fresh start today.'}
+          <span className="inline-flex items-center gap-2">
+            {freezeConsumedNotice && <Icon name="snowflake" size={16} />}
+            {freezeConsumedNotice
+              ? 'A freeze saved your streak. Back to it today!'
+              : 'Your streak reset. Fresh start today.'}
+          </span>
         </motion.div>
       )}
 
@@ -74,32 +84,35 @@ export function Home() {
           <div className="text-right">
             <div className="text-xs uppercase tracking-widest text-white/60">Points</div>
             <div className="text-3xl font-black tabular">{progress.points}</div>
-            <div className="mt-2 text-xs uppercase tracking-widest text-white/60">
-              ❄︎ Freeze: {progress.freezesHeld}
+            <div className="mt-2 inline-flex items-center gap-1.5 text-xs uppercase tracking-widest text-ice-400">
+              <Icon name="snowflake" size={14} /> {progress.freezesHeld}
             </div>
           </div>
         </div>
-        <div className="mt-4">
+        <div className="mt-4 inline-flex items-center gap-2">
+          <span className={doneToday ? 'text-pitch-400' : 'text-white/40'}>
+            <Icon name={doneToday ? 'check' : 'circle'} size={18} />
+          </span>
           <span className={doneToday ? 'text-pitch-400' : 'text-white/70'}>
-            {doneToday ? '✓ Daily goal completed today' : '○ Daily goal not done yet'}
+            {doneToday ? 'Daily goal completed today' : 'Daily goal not done yet'}
           </span>
         </div>
       </motion.section>
 
       <div className="grid grid-cols-1 gap-3">
-        <Button variant="primary" size="xl" fullWidth onClick={() => nav('/session/daily')} disabled={libSize === 0}>
-          Start Daily Session
+        <Button variant="primary" size="xl" fullWidth icon="play" onClick={() => nav('/session/daily')} disabled={libSize === 0}>
+          Start daily session
         </Button>
         <div className="grid grid-cols-2 gap-3">
-          <Button variant="secondary" size="lg" onClick={() => nav('/session/extra')} disabled={libSize === 0}>
-            Extra Time
+          <Button variant="secondary" size="lg" icon="plus" onClick={() => nav('/session/extra')} disabled={libSize === 0}>
+            Extra time
           </Button>
-          <Button variant="secondary" size="lg" onClick={() => nav('/library')}>
+          <Button variant="secondary" size="lg" icon="list" onClick={() => nav('/library')}>
             Library
           </Button>
         </div>
-        <Button variant="ghost" size="lg" fullWidth onClick={() => nav('/shop')}>
-          Shop — buy a freeze
+        <Button variant="ghost" size="lg" fullWidth icon="bag" onClick={() => nav('/shop')}>
+          Shop
         </Button>
       </div>
 

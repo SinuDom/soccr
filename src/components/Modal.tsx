@@ -23,7 +23,7 @@ export function Modal({ open, onClose, title, children, footer }: Props) {
         >
           <motion.div
             key="panel"
-            className="w-full sm:max-w-md bg-ink-800 rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl border border-ink-700"
+            className="w-full sm:max-w-lg bg-ink-800 rounded-t-3xl sm:rounded-3xl p-6 sm:p-7 shadow-2xl border border-ink-700"
             initial={{ y: 40, opacity: 0.5 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 40, opacity: 0 }}

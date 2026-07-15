@@ -4,6 +4,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { useContentStore } from '@/store/contentStore';
 import { useProgressStore } from '@/store/progressStore';
 import { Button } from '@/components/Button';
+import { Icon } from '@/components/Icon';
 
 export function Shop() {
   const content = useContentStore((s) => s.content);
@@ -19,10 +20,16 @@ export function Shop() {
   const notEnough = progress.points < cost;
 
   return (
-    <div className="min-h-dvh max-w-xl mx-auto p-5 pt-8 w-full">
-      <header className="mb-6">
-        <Link to="/" className="text-white/60 text-sm">← Home</Link>
-        <h1 className="text-2xl font-black tracking-tight mt-1">Shop</h1>
+    <div className="min-h-dvh max-w-xl lg:max-w-2xl mx-auto p-5 pt-8 w-full">
+      <header className="flex items-center gap-3 mb-6">
+        <Link
+          to="/"
+          aria-label="Back home"
+          className="grid place-items-center h-10 w-10 rounded-2xl text-white/70 hover:text-white hover:bg-ink-800 transition-colors"
+        >
+          <Icon name="arrow-left" size={20} />
+        </Link>
+        <h1 className="text-2xl font-black tracking-tight">Shop</h1>
       </header>
 
       <section className="rounded-3xl bg-ink-800 border border-ink-700 p-6 mb-6 flex items-center justify-between">
@@ -43,7 +50,9 @@ export function Shop() {
         className="rounded-3xl bg-ink-800 border border-ice-500/40 p-6"
       >
         <div className="flex items-center gap-4 mb-4">
-          <div className="text-5xl">❄︎</div>
+          <div className="grid place-items-center h-14 w-14 rounded-2xl bg-ice-500/15 text-ice-400">
+            <Icon name="snowflake" size={30} />
+          </div>
           <div>
             <h2 className="text-xl font-bold">Streak Freeze</h2>
             <p className="text-white/60 text-sm">Saves your streak the next time you miss a day.</p>
@@ -54,6 +63,7 @@ export function Shop() {
           <Button
             variant="ice"
             size="lg"
+            icon={atMax ? undefined : 'plus'}
             disabled={atMax || notEnough}
             onClick={() => {
               setError(null);

@@ -4,6 +4,7 @@ import type { User } from '@/lib/domain/types';
 import { useProgressStore } from '@/store/progressStore';
 import { Modal } from './Modal';
 import { Button } from './Button';
+import { Icon } from './Icon';
 
 interface Props {
   users: User[];
@@ -24,13 +25,13 @@ export function UserSwitcher({ users }: Props) {
   return (
     <>
       <button
-        className="flex items-center gap-2 rounded-full bg-ink-700 hover:bg-ink-600 border border-ink-600 px-3 py-1.5 text-sm"
+        className="flex items-center gap-2 rounded-full bg-ink-700 hover:bg-ink-600 border border-ink-600 px-3 py-1.5 text-sm transition-colors active:scale-[0.98]"
         onClick={() => setOpen(true)}
         aria-label="Switch user"
       >
         <Avatar name={active?.name ?? '?'} />
         <span className="font-semibold">{active?.name ?? 'Pick a user'}</span>
-        <span className="text-white/50">▾</span>
+        <Icon name="chevron-down" size={16} className="text-white/50" />
       </button>
 
       <Modal open={open} onClose={() => setOpen(false)} title="Who's practicing?">
@@ -56,7 +57,7 @@ export function UserSwitcher({ users }: Props) {
                       {u.videos.length} videos · streak {p?.currentStreak ?? 0} · {p?.points ?? 0} pts
                     </div>
                   </div>
-                  {isActive && <span className="text-pitch-400 text-xs uppercase">active</span>}
+                  {isActive && <Icon name="check" size={18} className="text-pitch-400" />}
                 </button>
               </li>
             );

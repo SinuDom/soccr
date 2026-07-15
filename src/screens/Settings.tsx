@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useContentStore, getUser } from '@/store/contentStore';
 import { useProgressStore } from '@/store/progressStore';
 import { Button } from '@/components/Button';
+import { Icon } from '@/components/Icon';
 import { Modal } from '@/components/Modal';
 import { exportToBlob, parseImportedText } from '@/lib/storage/portability';
 
@@ -58,10 +59,16 @@ export function Settings() {
   }
 
   return (
-    <div className="min-h-dvh max-w-xl mx-auto p-5 pt-8 w-full">
-      <header className="mb-6">
-        <Link to="/" className="text-white/60 text-sm">← Home</Link>
-        <h1 className="text-2xl font-black tracking-tight mt-1">Settings</h1>
+    <div className="min-h-dvh max-w-xl lg:max-w-3xl mx-auto p-5 pt-8 w-full">
+      <header className="flex items-center gap-3 mb-6">
+        <Link
+          to="/"
+          aria-label="Back home"
+          className="grid place-items-center h-10 w-10 rounded-2xl text-white/70 hover:text-white hover:bg-ink-800 transition-colors"
+        >
+          <Icon name="arrow-left" size={20} />
+        </Link>
+        <h1 className="text-2xl font-black tracking-tight">Settings</h1>
       </header>
 
       {corrupted && (
@@ -109,13 +116,13 @@ export function Settings() {
           <p className="text-white/60 text-sm">Content not loaded.</p>
         )}
         <div className="mt-3">
-          <Button variant="ghost" size="md" onClick={() => void refetchContent()}>Re-fetch content.json</Button>
+          <Button variant="ghost" size="md" icon="refresh" onClick={() => void refetchContent()}>Re-fetch content.json</Button>
         </div>
       </Section>
 
       <Section title="Backup (all users)">
         <div className="flex flex-col gap-3">
-          <Button variant="secondary" size="lg" onClick={handleExport}>Export vault (.json)</Button>
+          <Button variant="secondary" size="lg" icon="download" onClick={handleExport}>Export vault (.json)</Button>
           <input
             ref={fileRef}
             type="file"
@@ -123,7 +130,7 @@ export function Settings() {
             className="hidden"
             onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFilePicked(f); e.target.value = ''; }}
           />
-          <Button variant="secondary" size="lg" onClick={() => fileRef.current?.click()}>Import vault…</Button>
+          <Button variant="secondary" size="lg" icon="upload" onClick={() => fileRef.current?.click()}>Import vault…</Button>
           {importError && <div className="text-sm text-red-300">{importError}</div>}
         </div>
         <p className="text-white/50 text-xs mt-3">
@@ -132,7 +139,7 @@ export function Settings() {
       </Section>
 
       <Section title="Danger zone">
-        <Button variant="danger" size="lg" onClick={() => setConfirmReset(true)}>
+        <Button variant="danger" size="lg" icon="trash" onClick={() => setConfirmReset(true)}>
           Reset {activeUser?.name ?? 'active user'}'s progress…
         </Button>
       </Section>

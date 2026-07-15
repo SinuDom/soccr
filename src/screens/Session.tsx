@@ -220,7 +220,7 @@ export function SessionScreen() {
   }
 
   return (
-    <div className="min-h-dvh flex flex-col p-4 sm:p-6 max-w-2xl mx-auto w-full">
+    <div className="min-h-dvh flex flex-col p-4 sm:p-6 max-w-2xl lg:max-w-5xl mx-auto w-full">
       <SessionHeader
         session={session}
         targetMs={targetMs}
@@ -267,14 +267,29 @@ export function SessionScreen() {
 function SessionHeader({
   session, targetMs, userName, onQuit,
 }: { session: Session; targetMs: number | null; userName: string; onQuit: () => void }) {
+  const modeLabel = session.mode === 'daily'
+    ? `Daily · ${(targetMs ?? 0) / 60_000} min`
+    : session.mode === 'extra' ? 'Extra time' : 'Manual pick';
   return (
-    <header className="flex items-center justify-between">
-      <button className="text-white/70 hover:text-white text-sm" onClick={onQuit}>← End</button>
-      <div className="text-xs uppercase tracking-widest text-white/50">
-        {userName} · {session.mode === 'daily' ? `Daily · ${(targetMs ?? 0) / 60_000} min goal` :
-          session.mode === 'extra' ? 'Extra Time' : 'Manual pick'}
+    <header className="flex items-center justify-between gap-3">
+      <Button
+        variant="ghost"
+        size="sm"
+        iconOnly
+        icon="close"
+        onClick={onQuit}
+        className="text-white/70"
+      >
+        End session
+      </Button>
+      <div className="flex-1 text-center">
+        <div className="text-sm font-semibold leading-tight">{userName}</div>
+        <div className="text-[11px] uppercase tracking-widest text-white/45">{modeLabel}</div>
       </div>
-      <div className="text-xs text-white/50 tabular">videos: {session.rounds.length}</div>
+      <div className="min-w-[3.5rem] text-right">
+        <div className="text-lg font-black tabular leading-none">{session.rounds.length}</div>
+        <div className="text-[10px] uppercase tracking-widest text-white/45">done</div>
+      </div>
     </header>
   );
 }
@@ -320,63 +335,70 @@ function PracticeArea({
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: 'spring', stiffness: 220, damping: 24 }}
-      className="flex flex-col items-center gap-5 mt-4"
+      className="mt-4 grid gap-6 lg:grid-cols-2 lg:items-start lg:gap-10"
     >
-      {/* The training clip loops continuously while drilling. */}
-      {loadFailed ? (
-        <div className="w-full rounded-2xl bg-red-500/10 border border-red-500/40 p-6 text-center">
-          <p className="text-red-200 mb-4">This video didn't load.</p>
-          <Button variant="secondary" onClick={onSkip}>Skip to another video</Button>
-        </div>
-      ) : (
-        <VideoPlayer
-          key={activeVideo.id}
-          video={activeVideo}
-          onLoadError={onLoadError}
-          loop
-        />
-      )}
-
-      {/* Secondary, glanceable session indicator — shows how much of the
-          overall session goal is left, with no numbers to focus on. */}
-      {targetMs ? (
-        <div className="flex flex-col items-center gap-1">
-          <ProgressRing progress={ringProgress} size={56} stroke={6} color="#8b93a1" trackColor="#2a3444" />
-          <div className="text-white/40 text-[10px] uppercase tracking-widest">session</div>
-        </div>
-      ) : (
-        <div className="opacity-70 scale-75">
-          <PracticeClock
-            elapsedMs={roundElapsed + session.rounds.reduce((a, r) => a + r.practiceMs, 0)}
-            running
-            compact
+      {/* LEFT COLUMN — the looping clip and what you're drilling. */}
+      <div className="flex flex-col gap-4">
+        {loadFailed ? (
+          <div className="w-full rounded-2xl bg-red-500/10 border border-red-500/40 p-6 text-center">
+            <p className="text-red-200 mb-4">This video didn’t load.</p>
+            <Button variant="secondary" icon="skip" onClick={onSkip}>Skip to another</Button>
+          </div>
+        ) : (
+          <VideoPlayer
+            key={activeVideo.id}
+            video={activeVideo}
+            onLoadError={onLoadError}
+            loop
           />
-        </div>
-      )}
-
-      <div className="text-center px-4">
-        <div className="text-white/50 text-xs uppercase tracking-widest">Now drilling</div>
-        <div className="font-bold text-white text-lg">{activeVideo.title}</div>
-        {activeVideo.description && (
-          <p className="text-white/70 text-sm mt-1">{activeVideo.description}</p>
         )}
+
+        <div className="text-center lg:text-left px-1">
+          <div className="text-white/45 text-[11px] uppercase tracking-widest">Now drilling</div>
+          <div className="font-bold text-white text-lg lg:text-xl leading-snug">{activeVideo.title}</div>
+          {activeVideo.description && (
+            <p className="text-white/60 text-sm mt-1 leading-relaxed">{activeVideo.description}</p>
+          )}
+        </div>
       </div>
 
-      {/* Primary focus: the per-drill countdown timer(s). */}
-      <DrillTimers
-        seconds={activeVideo.timer}
-        repetition={activeVideo.repetition}
-        titles={activeVideo.timerTitles}
-        onRunningChange={onDrillRunningChange}
-      />
-
-      <p className="text-white/60 text-center px-4 text-sm">When you’re ready for the next skill:</p>
-
-      <div className="w-full space-y-3">
-        <Button variant="primary" size="xl" fullWidth onClick={onNext}>Next video →</Button>
-        {mode !== 'daily' && (
-          <Button variant="ice" size="lg" fullWidth onClick={onStop}>Stop — bank {formatMin(total)}</Button>
+      {/* RIGHT COLUMN — the primary drill timer(s), plus a glanceable session
+          indicator and the flow controls. */}
+      <div className="flex flex-col items-center gap-6">
+        {/* Secondary, glanceable session indicator — no numbers to focus on. */}
+        {targetMs ? (
+          <div className="flex items-center gap-2 text-white/40">
+            <ProgressRing progress={ringProgress} size={40} stroke={5} color="#8b93a1" trackColor="#2a3444" />
+            <span className="text-[10px] uppercase tracking-widest">session</span>
+          </div>
+        ) : (
+          <div className="opacity-70 scale-75">
+            <PracticeClock
+              elapsedMs={roundElapsed + session.rounds.reduce((a, r) => a + r.practiceMs, 0)}
+              running
+              compact
+            />
+          </div>
         )}
+
+        {/* Primary focus: the per-drill countdown timer(s). */}
+        <DrillTimers
+          seconds={activeVideo.timer}
+          repetition={activeVideo.repetition}
+          titles={activeVideo.timerTitles}
+          onRunningChange={onDrillRunningChange}
+        />
+
+        <div className="w-full max-w-sm space-y-3 pt-2">
+          <Button variant="primary" size="xl" fullWidth iconRight="arrow-right" onClick={onNext}>
+            Next video
+          </Button>
+          {mode !== 'daily' && (
+            <Button variant="ice" size="lg" fullWidth icon="stop" onClick={onStop}>
+              Stop · bank {formatMin(total)}
+            </Button>
+          )}
+        </div>
       </div>
     </motion.div>
   );

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ProgressRing } from './ProgressRing';
 import { formatClock } from './PracticeClock';
+import { Icon, type IconName } from './Icon';
 
 type Phase = 'idle' | 'running' | 'paused' | 'done';
 
@@ -82,64 +83,76 @@ export function DrillTimer({ seconds, index, label: customLabel, onRunningChange
   const label = customLabel ?? (index != null ? `Set ${index}` : 'Drill');
 
   return (
-    <div className="flex flex-col items-center gap-2">
+    <div className="flex flex-col items-center gap-3">
       <div className="text-white/50 text-[11px] uppercase tracking-widest">{label}</div>
       <ProgressRing
         progress={progress}
-        size={128}
+        size={132}
         stroke={8}
         color={phase === 'done' ? '#22d17a' : '#4aa8ff'}
       >
         <div
           className={[
-            'font-mono tabular font-black leading-none tracking-tight text-3xl',
+            'font-mono tabular font-black leading-none tracking-tight text-3xl transition-colors',
             phase === 'done' ? 'text-pitch-400' : 'text-white',
           ].join(' ')}
         >
           {formatClock(remainingMs)}
         </div>
       </ProgressRing>
-      {phase === 'idle' && (
-        <button
-          className="rounded-xl bg-pitch-500 hover:bg-pitch-400 active:bg-pitch-600 text-ink-950 font-semibold h-10 px-5"
-          onClick={start}
-        >
-          Start
-        </button>
-      )}
-      {phase === 'running' && (
-        <button
-          className="rounded-xl bg-ink-700 hover:bg-ink-600 text-white border border-ink-600 font-semibold h-10 px-5"
-          onClick={pause}
-        >
-          Pause
-        </button>
-      )}
-      {phase === 'paused' && (
-        <div className="flex gap-2">
-          <button
-            className="rounded-xl bg-pitch-500 hover:bg-pitch-400 active:bg-pitch-600 text-ink-950 font-semibold h-10 px-5"
-            onClick={resume}
-          >
-            Resume
-          </button>
-          <button
-            className="rounded-xl bg-ink-700 hover:bg-ink-600 text-white border border-ink-600 font-semibold h-10 px-4"
-            onClick={reset}
-          >
-            Reset
-          </button>
-        </div>
-      )}
-      {phase === 'done' && (
-        <button
-          className="rounded-xl bg-ink-700 hover:bg-ink-600 text-white border border-ink-600 font-semibold h-10 px-5"
-          onClick={start}
-        >
-          Again
-        </button>
-      )}
+      <div className="flex gap-2">
+        {phase === 'idle' && (
+          <ControlButton kind="primary" icon="play" label="Start drill" onClick={start} />
+        )}
+        {phase === 'running' && (
+          <ControlButton kind="muted" icon="pause" label="Pause" onClick={pause} />
+        )}
+        {phase === 'paused' && (
+          <>
+            <ControlButton kind="primary" icon="play" label="Resume" onClick={resume} />
+            <ControlButton kind="muted" icon="rotate" label="Reset" onClick={reset} />
+          </>
+        )}
+        {phase === 'done' && (
+          <ControlButton kind="primary" icon="rotate" label="Run again" onClick={start} />
+        )}
+      </div>
     </div>
+  );
+}
+
+/** Round, minimalistic icon control used for the drill timer transport. */
+function ControlButton({
+  kind,
+  icon,
+  label,
+  onClick,
+}: {
+  kind: 'primary' | 'muted';
+  icon: IconName;
+  label: string;
+  onClick: () => void;
+}) {
+  const tone =
+    kind === 'primary'
+      ? 'bg-pitch-500 hover:bg-pitch-400 active:bg-pitch-600 text-ink-950 shadow-glow'
+      : 'bg-ink-700 hover:bg-ink-600 text-white border border-ink-600';
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+      className={[
+        'grid place-items-center h-12 w-12 rounded-full',
+        'transition-[transform,background-color] duration-150 ease-out',
+        'active:scale-90 motion-reduce:transform-none',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pitch-400 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-950',
+        tone,
+      ].join(' ')}
+    >
+      <Icon name={icon} size={20} />
+    </button>
   );
 }
 
@@ -174,9 +187,9 @@ export function DrillTimers({
   const heading = count > 1 ? `${count} × ${formatClock(seconds * 1000)} drill` : 'Drill timer';
 
   return (
-    <div className="w-full flex flex-col items-center gap-3">
+    <div className="w-full flex flex-col items-center gap-4">
       <div className="text-white/60 text-sm uppercase tracking-widest">{heading}</div>
-      <div className="flex flex-wrap items-start justify-center gap-4">
+      <div className="flex flex-wrap items-start justify-center gap-5 sm:gap-8">
         {Array.from({ length: count }, (_, i) => (
           <DrillTimer
             key={i}
