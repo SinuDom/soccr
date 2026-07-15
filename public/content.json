@@ -1,7 +1,7 @@
 {
   "settings": {
-    "sessionTargetMinutes": 20,
-    "pointsPerExtraMinute": 10,
+    "sessionTargetMinutes": 2,
+    "pointsPerExtraMinute": 9,
     "freezeCostPoints": 100,
     "maxFreezesHeld": 1,
     "recycleWhenLibraryExhausted": true
