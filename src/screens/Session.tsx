@@ -1,0 +1,319 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { useContentStore } from '@/store/contentStore';
+import { useProgressStore } from '@/store/progressStore';
+import type { VideoRef, SessionMode, HistoryEntry } from '@/lib/domain/types';
+import { markSeen as markSeenPure, pickNextVideo } from '@/lib/domain/selection';
+import {
+  endEarly,
+  onVideoEnded,
+  pressNext,
+  startSession,
+  stopExtra,
+  tickDaily,
+  totalPracticeMs,
+  videoIdsWatched,
+  type Session,
+} from '@/lib/domain/session';
+import { toLocalDateString } from '@/lib/domain/streak';
+import { elapsedNow } from '@/lib/domain/practiceClock';
+import { PracticeClock } from '@/components/PracticeClock';
+import { ProgressRing } from '@/components/ProgressRing';
+import { Button } from '@/components/Button';
+import { Modal } from '@/components/Modal';
+import { VideoPlayer } from '@/components/VideoPlayer';
+
+/** Deep-linked URL param — 'daily' or 'extra'. Manual (Mode C) uses ?video=. */
+type Params = { mode: 'daily' | 'extra' };
+
+export function SessionScreen() {
+  const nav = useNavigate();
+  const params = useParams<Params>();
+  const mode: SessionMode = params.mode === 'daily' ? 'daily' : 'extra';
+  const manualId = useMemo(() => new URLSearchParams(window.location.search).get('video') ?? null, []);
+  const effectiveMode: SessionMode = manualId ? 'manual' : mode;
+
+  const content = useContentStore((s) => s.content);
+  const progress = useProgressStore((s) => s.progress);
+  const markSeenAction = useProgressStore((s) => s.markSeen);
+  const advanceCycle = useProgressStore((s) => s.advanceCycle);
+  const creditDaily = useProgressStore((s) => s.creditDaily);
+  const bankExtraTime = useProgressStore((s) => s.bankExtraTime);
+
+  // Local, mutable session state that lives only for this screen.
+  const [session, setSession] = useState<Session | null>(null);
+  const [confirmEnd, setConfirmEnd] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const startedAtRef = useRef<number>(0);
+  const initedRef = useRef(false);
+
+  const targetMs = mode === 'daily' && content ? content.settings.sessionTargetMinutes * 60_000 : null;
+
+  // Bootstrap: pick the first video, start the session.
+  useEffect(() => {
+    if (!content || initedRef.current) return;
+    initedRef.current = true;
+    let firstId: string | null = null;
+    if (manualId && content.videos.some((v) => v.id === manualId)) {
+      firstId = manualId;
+    } else {
+      const libIds = content.videos.map((v) => v.id);
+      const r = pickNextVideo({
+        libraryIds: libIds,
+        seenIds: progress.seenVideoIds,
+        cycleNumber: progress.cycleNumber,
+      });
+      if (r.cycleAdvanced) advanceCycle(r.nextSeenIds, r.nextCycleNumber);
+      firstId = r.videoId;
+    }
+    if (!firstId) return;
+    const now = Date.now();
+    startedAtRef.current = now;
+    setSession(startSession({ mode: effectiveMode, firstVideoId: firstId, targetMs, now }));
+  }, [content, manualId, targetMs, progress.seenVideoIds, progress.cycleNumber, advanceCycle, effectiveMode]);
+
+  // Daily-mode auto-end tick. rAF, cheap; the underlying math is wall-clock so
+  // being throttled by an inactive tab doesn't lose or add time.
+  useEffect(() => {
+    if (!session || session.phase !== 'practicing' || session.mode !== 'daily') return;
+    let raf = 0;
+    const loop = () => {
+      setSession((s) => (s ? tickDaily(s, Date.now()) : s));
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [session?.phase, session?.mode]);
+
+  // When the daily session auto-ends, credit & navigate.
+  useEffect(() => {
+    if (!session || session.phase !== 'done') return;
+    if (session.discarded) {
+      nav('/', { replace: true });
+      return;
+    }
+    finalizeSession(session);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.phase]);
+
+  const finalizeSession = useCallback((s: Session) => {
+    if (!content) return;
+    const now = Date.now();
+    const practiceMs = totalPracticeMs(s, now);
+    const videoIds = videoIdsWatched(s);
+    // Ensure every watched video is marked seen (belt-and-braces).
+    for (const id of videoIds) markSeenAction(id);
+
+    if (s.mode === 'daily' && s.autoEnded) {
+      const today = toLocalDateString(new Date());
+      const entry: Omit<HistoryEntry, 'completedDaily'> = {
+        date: today,
+        startedAt: startedAtRef.current,
+        mode: 'daily',
+        practiceMs,
+        pointsEarned: 0,
+        videoIds,
+      };
+      creditDaily(today, entry);
+      nav(`/session/complete?mode=daily&ms=${practiceMs}`, { replace: true });
+    } else {
+      // Extra Time or Manual: award points, log history.
+      const entry: Omit<HistoryEntry, 'pointsEarned'> = {
+        date: toLocalDateString(new Date()),
+        startedAt: startedAtRef.current,
+        mode: s.mode,
+        practiceMs,
+        videoIds,
+      };
+      const earned = bankExtraTime(content.settings, entry);
+      nav(`/session/complete?mode=${s.mode}&ms=${practiceMs}&pts=${earned}`, { replace: true });
+    }
+  }, [content, creditDaily, bankExtraTime, markSeenAction, nav]);
+
+  const handleVideoEnded = useCallback(() => {
+    setSession((s) => (s ? onVideoEnded(s, Date.now()) : s));
+  }, []);
+
+  const handleLoadError = useCallback(() => { setLoadFailed(true); }, []);
+
+  const handleSkip = useCallback(() => {
+    if (!content || !session) return;
+    // Skip: pick a new video, don't mark seen, don't count time.
+    const libIds = content.videos.map((v) => v.id);
+    const r = pickNextVideo({
+      libraryIds: libIds,
+      seenIds: progress.seenVideoIds,
+      cycleNumber: progress.cycleNumber,
+    });
+    if (r.cycleAdvanced) advanceCycle(r.nextSeenIds, r.nextCycleNumber);
+    if (!r.videoId) return;
+    setLoadFailed(false);
+    setSession((s) => (s ? { ...s, activeVideoId: r.videoId!, phase: 'watching' } : s));
+  }, [content, session, progress.seenVideoIds, progress.cycleNumber, advanceCycle]);
+
+  const handleNext = useCallback(() => {
+    if (!content || !session) return;
+    // Bank current round, mark the watched video seen, pick a new one.
+    markSeenAction(session.activeVideoId);
+    const libIds = content.videos.map((v) => v.id);
+    const r = pickNextVideo({
+      libraryIds: libIds,
+      // Use "current seen + the one we just marked" for correctness within this tick.
+      seenIds: markSeenPure(progress.seenVideoIds, session.activeVideoId),
+      cycleNumber: progress.cycleNumber,
+    });
+    if (r.cycleAdvanced) advanceCycle(r.nextSeenIds, r.nextCycleNumber);
+    if (!r.videoId) return;
+    setSession((s) => (s ? pressNext(s, r.videoId!, Date.now()).session : s));
+  }, [content, session, progress.seenVideoIds, progress.cycleNumber, advanceCycle, markSeenAction]);
+
+  const handleStop = useCallback(() => {
+    if (!session) return;
+    setSession((s) => (s ? stopExtra(s, Date.now()) : s));
+  }, [session]);
+
+  const handleEndEarly = useCallback(() => {
+    setConfirmEnd(false);
+    setSession((s) => (s ? endEarly(s) : s));
+  }, []);
+
+  if (!content) return null;
+  if (!session) {
+    return <div className="min-h-dvh grid place-items-center text-white/70">Loading…</div>;
+  }
+
+  const activeVideo = content.videos.find((v) => v.id === session.activeVideoId) as VideoRef | undefined;
+  if (!activeVideo) {
+    return (
+      <div className="min-h-dvh grid place-items-center p-6 text-center">
+        <div>
+          <p className="mb-4">That video isn’t in the library anymore.</p>
+          <Button onClick={() => nav('/', { replace: true })}>Home</Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-dvh flex flex-col p-4 sm:p-6 max-w-2xl mx-auto w-full">
+      <SessionHeader
+        session={session}
+        targetMs={targetMs}
+        onQuit={() => setConfirmEnd(true)}
+      />
+
+      <div className="mt-4">
+        {session.phase === 'watching' ? (
+          loadFailed ? (
+            <div className="rounded-2xl bg-red-500/10 border border-red-500/40 p-6 text-center">
+              <p className="text-red-200 mb-4">This video didn't load.</p>
+              <Button variant="secondary" onClick={handleSkip}>Skip to another video</Button>
+            </div>
+          ) : (
+            <VideoPlayer
+              key={activeVideo.id}
+              video={activeVideo}
+              onEnded={handleVideoEnded}
+              onLoadError={handleLoadError}
+            />
+          )
+        ) : session.phase === 'practicing' ? (
+          <PracticeArea session={session} targetMs={targetMs} onNext={handleNext} onStop={handleStop} mode={effectiveMode} />
+        ) : null}
+      </div>
+
+      <Modal
+        open={confirmEnd}
+        onClose={() => setConfirmEnd(false)}
+        title="End this session?"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setConfirmEnd(false)}>Keep going</Button>
+            <Button variant="danger" onClick={handleEndEarly}>End — discard progress</Button>
+          </>
+        }
+      >
+        {session.mode === 'daily'
+          ? 'Ending early cancels this session — no streak credit, no points, this practice time won’t count.'
+          : 'Ending early discards the current round. Use “Stop” instead if you want your practice time to bank into points.'}
+      </Modal>
+    </div>
+  );
+}
+
+function SessionHeader({ session, targetMs, onQuit }: { session: Session; targetMs: number | null; onQuit: () => void }) {
+  return (
+    <header className="flex items-center justify-between">
+      <button className="text-white/70 hover:text-white text-sm" onClick={onQuit}>← End</button>
+      <div className="text-xs uppercase tracking-widest text-white/50">
+        {session.mode === 'daily' ? `Daily · ${(targetMs ?? 0) / 60_000} min goal` :
+          session.mode === 'extra' ? 'Extra Time' : 'Manual pick'}
+      </div>
+      <div className="text-xs text-white/50 tabular">videos: {session.rounds.length}</div>
+    </header>
+  );
+}
+
+function PracticeArea({
+  session,
+  targetMs,
+  onNext,
+  onStop,
+  mode,
+}: {
+  session: Session;
+  targetMs: number | null;
+  onNext: () => void;
+  onStop: () => void;
+  mode: SessionMode;
+}) {
+  const [, force] = useState(0);
+  useEffect(() => {
+    let raf = 0;
+    const loop = () => { force((n) => (n + 1) & 0xffff); raf = requestAnimationFrame(loop); };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  const now = Date.now();
+  const total = totalPracticeMs(session, now);
+  const roundElapsed = elapsedNow(session.clock, now);
+  const ringProgress = targetMs ? Math.min(1, total / targetMs) : 0;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: 'spring', stiffness: 220, damping: 24 }}
+      className="flex flex-col items-center gap-6 mt-4"
+    >
+      {targetMs ? (
+        <ProgressRing progress={ringProgress} size={280}>
+          <PracticeClock elapsedMs={total} targetMs={targetMs} running />
+        </ProgressRing>
+      ) : (
+        <div className="my-6">
+          <PracticeClock elapsedMs={roundElapsed + (session.rounds.reduce((a, r) => a + r.practiceMs, 0))} running />
+        </div>
+      )}
+
+      <p className="text-white/70 text-center px-4">
+        Drill it. When you’re ready for the next skill:
+      </p>
+
+      <div className="w-full space-y-3">
+        <Button variant="primary" size="xl" fullWidth onClick={onNext}>Next video →</Button>
+        {mode !== 'daily' && (
+          <Button variant="ice" size="lg" fullWidth onClick={onStop}>Stop — bank {formatMin(total)}</Button>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+function formatMin(ms: number): string {
+  const m = Math.floor(ms / 60_000);
+  const s = Math.floor((ms % 60_000) / 1000);
+  return `${m}m ${String(s).padStart(2, '0')}s`;
+}

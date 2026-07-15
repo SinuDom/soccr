@@ -1,0 +1,23 @@
+{
+  "settings": {
+    "sessionTargetMinutes": 20,
+    "pointsPerExtraMinute": 10,
+    "freezeCostPoints": 100,
+    "maxFreezesHeld": 1,
+    "recycleWhenLibraryExhausted": true
+  },
+  "videos": [
+    {
+      "url": "https://www.youtube.com/watch?v=8cCISQG1SuA",
+      "title": "video 1"
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=3eTVbWVqpM8",
+      "title": "video 2"
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=-GVpr43oVQU",
+      "title": "video 3"
+    }
+  ]
+}

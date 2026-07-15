@@ -1,0 +1,11 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# The service worker also serves as an SPA fallback, but Netlify's redirect
+# is the guarantee for deep-linked URLs on first load.

@@ -1,0 +1,22 @@
+node_modules
+dist
+dist-ssr
+.env
+.env.local
+.env.*.local
+.DS_Store
+*.local
+
+# Vite / build artefacts
+.vite
+stats.html
+
+# Editor
+.vscode
+.idea
+
+# OS
+Thumbs.db
+
+# Test coverage
+coverage

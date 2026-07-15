@@ -1,0 +1,76 @@
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { motion, useReducedMotion } from 'framer-motion';
+import { useContentStore } from '@/store/contentStore';
+import { useProgressStore } from '@/store/progressStore';
+import { Button } from '@/components/Button';
+
+export function Shop() {
+  const content = useContentStore((s) => s.content);
+  const progress = useProgressStore((s) => s.progress);
+  const buy = useProgressStore((s) => s.buyFreeze);
+  const [bought, setBought] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const reduced = useReducedMotion();
+
+  if (!content) return null;
+  const cost = content.settings.freezeCostPoints;
+  const atMax = progress.freezesHeld >= content.settings.maxFreezesHeld;
+  const notEnough = progress.points < cost;
+
+  return (
+    <div className="min-h-dvh max-w-xl mx-auto p-5 pt-8 w-full">
+      <header className="mb-6">
+        <Link to="/" className="text-white/60 text-sm">← Home</Link>
+        <h1 className="text-2xl font-black tracking-tight mt-1">Shop</h1>
+      </header>
+
+      <section className="rounded-3xl bg-ink-800 border border-ink-700 p-6 mb-6 flex items-center justify-between">
+        <div>
+          <div className="text-xs uppercase tracking-widest text-white/60">Points</div>
+          <div className="text-4xl font-black tabular">{progress.points}</div>
+        </div>
+        <div className="text-right">
+          <div className="text-xs uppercase tracking-widest text-white/60">Freezes held</div>
+          <div className="text-2xl font-bold">{progress.freezesHeld} / {content.settings.maxFreezesHeld}</div>
+        </div>
+      </section>
+
+      <motion.section
+        initial={false}
+        animate={bought && !reduced ? { scale: [1, 1.04, 1], boxShadow: ['0 0 0 rgba(127,215,255,0)', '0 0 60px rgba(127,215,255,0.5)', '0 0 0 rgba(127,215,255,0)'] } : undefined}
+        transition={{ duration: 0.8 }}
+        className="rounded-3xl bg-ink-800 border border-ice-500/40 p-6"
+      >
+        <div className="flex items-center gap-4 mb-4">
+          <div className="text-5xl">❄︎</div>
+          <div>
+            <h2 className="text-xl font-bold">Streak Freeze</h2>
+            <p className="text-white/60 text-sm">Saves your streak the next time you miss a day.</p>
+          </div>
+        </div>
+        <div className="flex items-center justify-between">
+          <div className="text-flame-400 font-bold">Cost: {cost} pts</div>
+          <Button
+            variant="ice"
+            size="lg"
+            disabled={atMax || notEnough}
+            onClick={() => {
+              setError(null);
+              const r = buy(content.settings);
+              if (r.ok) { setBought(true); setTimeout(() => setBought(false), 900); }
+              else setError(r.reason === 'at_max_freezes' ? `You already hold ${content.settings.maxFreezesHeld}.` : 'Not enough points yet.');
+            }}
+          >
+            {atMax ? `Max ${content.settings.maxFreezesHeld} held` : 'Buy freeze'}
+          </Button>
+        </div>
+        {error && <div className="mt-3 text-sm text-red-300">{error}</div>}
+      </motion.section>
+
+      <p className="text-white/40 text-xs mt-8 text-center">
+        Earn points by practicing in Extra Time or by hand-picking videos from the Library.
+      </p>
+    </div>
+  );
+}
