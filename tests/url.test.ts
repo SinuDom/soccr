@@ -1,5 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { detectPlatform, extractInstagramCode, extractTikTokId, extractYouTubeId, hashUrl, normalizeUrl } from '@/lib/content/url';
+import { detectPlatform, extractInstagramCode, extractTikTokId, extractYouTubeId, hashUrl, isYouTubeShort, normalizeUrl } from '@/lib/content/url';
+
+describe('isYouTubeShort', () => {
+  it('is true for /shorts/ URLs', () => {
+    expect(isYouTubeShort('https://www.youtube.com/shorts/--llBGWd4JA')).toBe(true);
+    expect(isYouTubeShort('https://youtube.com/shorts/abc?si=x')).toBe(true);
+  });
+  it('is false for watch/embed/other URLs', () => {
+    expect(isYouTubeShort('https://www.youtube.com/watch?v=abc')).toBe(false);
+    expect(isYouTubeShort('https://youtu.be/abc')).toBe(false);
+    expect(isYouTubeShort('https://www.instagram.com/reel/abc/')).toBe(false);
+    expect(isYouTubeShort('not a url')).toBe(false);
+  });
+});
 
 describe('normalizeUrl', () => {
   it('trims and lowercases host', () => {

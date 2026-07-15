@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useContentStore, getUser } from '@/store/contentStore';
 import { useProgressStore } from '@/store/progressStore';
 import type { VideoRef, SessionMode, HistoryEntry } from '@/lib/domain/types';
@@ -19,11 +19,11 @@ import {
 import { toLocalDateString } from '@/lib/domain/streak';
 import { elapsedNow, startClock } from '@/lib/domain/practiceClock';
 import { PracticeClock } from '@/components/PracticeClock';
-import { ProgressRing } from '@/components/ProgressRing';
 import { DrillTimers } from '@/components/DrillTimer';
 import { Button } from '@/components/Button';
 import { Modal } from '@/components/Modal';
 import { VideoPlayer } from '@/components/VideoPlayer';
+import { isYouTubeShort } from '@/lib/content/url';
 
 /** Deep-linked URL param — 'daily' or 'extra'. Manual (Mode C) uses ?video=. */
 type Params = { mode: 'daily' | 'extra' };
@@ -49,6 +49,7 @@ export function SessionScreen() {
   const [session, setSession] = useState<Session | null>(null);
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
+  const [showIntro, setShowIntro] = useState(true);
   const startedAtRef = useRef<number>(0);
   const initedRef = useRef(false);
 
@@ -76,6 +77,13 @@ export function SessionScreen() {
     startedAtRef.current = now;
     setSession(startSession({ mode: effectiveMode, firstVideoId: firstId, targetMs, now }));
   }, [content, activeUser, manualId, targetMs, progress.seenVideoIds, progress.cycleNumber, advanceCycle, effectiveMode, libraryVideos]);
+
+  // Play the start-of-session intro once, then reveal the practice screen.
+  useEffect(() => {
+    if (!session) return;
+    const t = setTimeout(() => setShowIntro(false), 1100);
+    return () => clearTimeout(t);
+  }, [session === null]);
 
   useEffect(() => {
     if (!session || session.phase !== 'practicing' || session.mode !== 'daily') return;
@@ -219,31 +227,62 @@ export function SessionScreen() {
     );
   }
 
+  const sessionProgress = targetMs ? Math.min(1, totalPracticeMs(session, Date.now()) / targetMs) : null;
+  const startLabel = mode === 'daily' ? 'Daily practice' : effectiveMode === 'manual' ? 'Manual pick' : 'Extra time';
+
   return (
     <div className="h-dvh overflow-hidden lg:h-auto lg:min-h-dvh lg:overflow-visible flex flex-col p-3 sm:p-6 max-w-2xl lg:max-w-5xl mx-auto w-full">
       <SessionHeader
         session={session}
         targetMs={targetMs}
+        sessionProgress={sessionProgress}
         userName={activeUser.name}
         onQuit={() => setConfirmEnd(true)}
       />
 
-      <div className="mt-3 flex-1 min-h-0 flex flex-col lg:mt-4 lg:block">
-        {session.phase === 'practicing' ? (
-          <PracticeArea
-            session={session}
-            targetMs={targetMs}
-            onNext={handleNext}
-            onStop={handleStop}
-            onSkip={handleSkip}
-            onDrillRunningChange={handleDrillRunningChange}
-            onLoadError={handleLoadError}
-            loadFailed={loadFailed}
-            mode={effectiveMode}
-            activeVideo={activeVideo}
-          />
-        ) : null}
+      <div className="mt-3 flex-1 min-h-0 flex flex-col overflow-hidden lg:mt-4 lg:block lg:overflow-visible">
+        <AnimatePresence mode="wait" initial={false}>
+          {session.phase === 'practicing' ? (
+            <PracticeArea
+              key={session.activeVideoId}
+              session={session}
+              targetMs={targetMs}
+              onNext={handleNext}
+              onStop={handleStop}
+              onSkip={handleSkip}
+              onDrillRunningChange={handleDrillRunningChange}
+              onLoadError={handleLoadError}
+              loadFailed={loadFailed}
+              mode={effectiveMode}
+              activeVideo={activeVideo}
+            />
+          ) : null}
+        </AnimatePresence>
       </div>
+
+      {/* One-shot start-of-session intro: a clean panel that wipes away. */}
+      <AnimatePresence>
+        {showIntro && (
+          <motion.div
+            key="intro"
+            className="fixed inset-0 z-50 grid place-items-center bg-ink-950"
+            initial={{ opacity: 1 }}
+            exit={{ y: '-100%' }}
+            transition={{ duration: 0.55, ease: [0.76, 0, 0.24, 1] }}
+          >
+            <motion.div
+              className="text-center px-6"
+              initial={{ scale: 0.8, opacity: 0, y: 14 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+            >
+              <div className="text-pitch-400 text-xs uppercase tracking-[0.3em] mb-3">{activeUser.name}</div>
+              <div className="text-3xl sm:text-4xl font-black tracking-tight text-white">{startLabel}</div>
+              <div className="mt-4 text-white/40 text-sm uppercase tracking-widest">Let’s go</div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <Modal
         open={confirmEnd}
@@ -265,28 +304,55 @@ export function SessionScreen() {
 }
 
 function SessionHeader({
-  session, targetMs, userName, onQuit,
-}: { session: Session; targetMs: number | null; userName: string; onQuit: () => void }) {
+  session, targetMs, sessionProgress, userName, onQuit,
+}: {
+  session: Session;
+  targetMs: number | null;
+  sessionProgress: number | null;
+  userName: string;
+  onQuit: () => void;
+}) {
   const modeLabel = session.mode === 'daily'
     ? `Daily · ${(targetMs ?? 0) / 60_000} min`
     : session.mode === 'extra' ? 'Extra time' : 'Manual pick';
   return (
-    <header className="flex items-center justify-between gap-3">
+    <header className="flex items-center gap-3">
       <Button
         variant="ghost"
         size="sm"
         iconOnly
         icon="close"
         onClick={onQuit}
-        className="text-white/70"
+        className="text-white/70 shrink-0"
       >
         End session
       </Button>
-      <div className="flex-1 text-center">
-        <div className="text-sm font-semibold leading-tight">{userName}</div>
-        <div className="text-[11px] uppercase tracking-widest text-white/45">{modeLabel}</div>
-      </div>
-      <div className="min-w-[3.5rem] text-right">
+
+      {sessionProgress !== null ? (
+        // Daily target as a slim progress bar sitting right next to the exit.
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[10px] uppercase tracking-widest text-white/45">Session goal</span>
+            <span className="text-[10px] uppercase tracking-widest text-white/45 tabular">
+              {Math.round(sessionProgress * 100)}%
+            </span>
+          </div>
+          <div className="h-2 w-full rounded-full bg-ink-700 overflow-hidden">
+            <motion.div
+              className="h-full rounded-full bg-pitch-500"
+              animate={{ width: `${sessionProgress * 100}%` }}
+              transition={{ type: 'tween', ease: 'linear', duration: 0.2 }}
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="flex-1 text-center min-w-0">
+          <div className="text-sm font-semibold leading-tight truncate">{userName}</div>
+          <div className="text-[11px] uppercase tracking-widest text-white/45">{modeLabel}</div>
+        </div>
+      )}
+
+      <div className="min-w-[3rem] text-right shrink-0">
         <div className="text-lg font-black tabular leading-none">{session.rounds.length}</div>
         <div className="text-[10px] uppercase tracking-widest text-white/45">done</div>
       </div>
@@ -328,14 +394,22 @@ function PracticeArea({
   const now = Date.now();
   const total = totalPracticeMs(session, now);
   const roundElapsed = elapsedNow(session.clock, now);
-  const ringProgress = targetMs ? Math.min(1, total / targetMs) : 0;
+  // Vertical Shorts get a narrower, portrait-friendly column so they don't sit
+  // letterboxed inside a wide 16:9 slot like long-form clips.
+  const isShort = isYouTubeShort(activeVideo.url);
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ type: 'spring', stiffness: 220, damping: 24 }}
-      className="flex h-full min-h-0 flex-col gap-3 lg:grid lg:h-auto lg:grid-cols-2 lg:items-start lg:gap-10"
+      // Drills wipe horizontally: the new clip slides in from the right while
+      // the previous one slides off to the left.
+      initial={{ x: '100%', opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      exit={{ x: '-100%', opacity: 0 }}
+      transition={{ type: 'tween', ease: [0.4, 0, 0.2, 1], duration: 0.35 }}
+      className={[
+        'flex h-full min-h-0 flex-col gap-3 lg:grid lg:h-auto lg:items-start lg:gap-10',
+        isShort ? 'lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]' : 'lg:grid-cols-2',
+      ].join(' ')}
     >
       {/* LEFT / TOP — the looping clip and what you’re drilling. On phones the
           clip flexes to fill leftover height so the whole drill fits one screen. */}
@@ -346,7 +420,12 @@ function PracticeArea({
             <Button variant="secondary" icon="skip" onClick={onSkip}>Skip to another</Button>
           </div>
         ) : (
-          <div className="min-h-0 flex-1 lg:flex-none lg:aspect-video">
+          <div
+            className={[
+              'min-h-0 flex-1 lg:flex-none',
+              isShort ? 'lg:h-[62vh]' : 'lg:aspect-video',
+            ].join(' ')}
+          >
             <VideoPlayer
               key={activeVideo.id}
               video={activeVideo}
@@ -366,17 +445,13 @@ function PracticeArea({
         </div>
       </div>
 
-      {/* RIGHT / BOTTOM — the primary drill timer(s), a glanceable session
-          indicator and the flow controls. Fixed height so the clip above can
-          flex to fill the rest of a portrait screen. */}
+      {/* RIGHT / BOTTOM — the primary drill timer(s), an optional non-daily
+          session clock and the flow controls. Fixed height so the clip above
+          can flex to fill the rest of a portrait screen. */}
       <div className="flex shrink-0 flex-col items-center gap-3 lg:gap-6">
-        {/* Secondary, glanceable session indicator — no numbers to focus on. */}
-        {targetMs ? (
-          <div className="flex items-center gap-2 text-white/40">
-            <ProgressRing progress={ringProgress} size={34} stroke={5} color="#8b93a1" trackColor="#2a3444" />
-            <span className="text-[10px] uppercase tracking-widest">session</span>
-          </div>
-        ) : (
+        {/* Daily mode shows its goal as the top progress bar, so nothing here.
+            Extra/manual keep the numberless practice clock. */}
+        {!targetMs && (
           <div className="opacity-70 scale-[0.6] -my-2 lg:my-0 lg:scale-75">
             <PracticeClock
               elapsedMs={roundElapsed + session.rounds.reduce((a, r) => a + r.practiceMs, 0)}

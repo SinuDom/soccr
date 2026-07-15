@@ -59,8 +59,8 @@ export function Settings() {
   }
 
   return (
-    <div className="min-h-dvh max-w-xl lg:max-w-3xl mx-auto p-5 pt-8 w-full">
-      <header className="flex items-center gap-3 mb-6">
+    <div className="min-h-dvh lg:h-dvh lg:overflow-hidden max-w-xl lg:max-w-4xl mx-auto p-5 pt-8 lg:pt-6 w-full lg:flex lg:flex-col">
+      <header className="flex items-center gap-3 mb-6 lg:mb-4 shrink-0">
         <Link
           to="/"
           aria-label="Back home"
@@ -72,11 +72,14 @@ export function Settings() {
       </header>
 
       {corrupted && (
-        <div className="rounded-2xl p-4 mb-4 bg-red-500/10 border border-red-500/40 text-red-200 text-sm">
+        <div className="rounded-2xl p-4 mb-4 bg-red-500/10 border border-red-500/40 text-red-200 text-sm shrink-0">
           Your saved progress couldn't be read. Import a backup below to restore it, or reset to start fresh.
         </div>
       )}
 
+      {/* On iPad the sections lay out in two columns so everything fits one
+          screen without scrolling; on phones they stack normally. */}
+      <div className="lg:grid lg:grid-cols-2 lg:gap-4 lg:content-start lg:flex-1 lg:min-h-0 lg:overflow-auto">
       <Section title="Users (from content.json)">
         {content && content.users.length > 0 ? (
           <ul className="space-y-2 text-sm">
@@ -143,6 +146,7 @@ export function Settings() {
           Reset {activeUser?.name ?? 'active user'}'s progress…
         </Button>
       </Section>
+      </div>
 
       <Modal
         open={confirmReset}
@@ -179,8 +183,8 @@ export function Settings() {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-3xl bg-ink-800 border border-ink-700 p-5 mb-4">
-      <h2 className="text-sm uppercase tracking-widest text-white/60 mb-3">{title}</h2>
+    <section className="rounded-3xl bg-ink-800 border border-ink-700 p-5 lg:p-4 mb-4 lg:mb-0">
+      <h2 className="text-sm uppercase tracking-widest text-white/60 mb-3 lg:mb-2">{title}</h2>
       {children}
     </section>
   );

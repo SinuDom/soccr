@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { VideoRef } from '@/lib/domain/types';
-import { extractInstagramCode, extractTikTokId, extractYouTubeId } from '@/lib/content/url';
+import { extractInstagramCode, extractTikTokId, extractYouTubeId, isYouTubeShort } from '@/lib/content/url';
 import { Button } from './Button';
 
 interface Props {
@@ -59,6 +59,7 @@ function YouTubePlayer({ video, onEnded, onLoadError, loop, fit }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<any>(null);
   const videoId = useMemo(() => extractYouTubeId(video.url), [video.url]);
+  const isShort = useMemo(() => isYouTubeShort(video.url), [video.url]);
 
   useEffect(() => {
     if (!videoId) { onLoadError(); return; }
@@ -92,6 +93,23 @@ function YouTubePlayer({ video, onEnded, onLoadError, loop, fit }: Props) {
     // onLoadError are stable enough (parent memoizes where needed).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [videoId]);
+
+  // Shorts are vertical (9:16): keep them in a narrow, portrait frame so they
+  // don't get letterboxed inside a wide 16:9 box like long-form videos.
+  if (isShort) {
+    return (
+      <div className={fit ? 'w-full h-full flex justify-center' : 'w-full flex justify-center'}>
+        <div
+          className={[
+            'rounded-2xl overflow-hidden bg-black shadow-lg aspect-[9/16]',
+            fit ? 'h-full max-w-full' : 'w-full max-w-[280px]',
+          ].join(' ')}
+        >
+          <div ref={containerRef} className="w-full h-full" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={fit ? 'w-full h-full' : 'w-full max-w-2xl mx-auto'}>

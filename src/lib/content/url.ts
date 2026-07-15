@@ -110,6 +110,21 @@ export function extractYouTubeId(url: string): string | null {
   }
 }
 
+/**
+ * True when the URL is a YouTube Short (vertical clip). Shorts live under the
+ * `/shorts/` path; we render them in a portrait frame instead of a 16:9 box.
+ */
+export function isYouTubeShort(url: string): boolean {
+  try {
+    const u = new URL(url.trim());
+    const host = u.host.toLowerCase();
+    if (!host.includes('youtube.com')) return false;
+    return /^\/shorts\//.test(u.pathname);
+  } catch {
+    return false;
+  }
+}
+
 /** Extract an Instagram short-code from /reel/{code} or /p/{code}. */
 export function extractInstagramCode(url: string): string | null {
   try {
