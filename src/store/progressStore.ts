@@ -46,6 +46,14 @@ interface ProgressState {
   creditDaily: (todayISO: string, entry: Omit<HistoryEntry, 'completedDaily'>) => void;
   bankExtraTime: (settings: Settings, entry: Omit<HistoryEntry, 'pointsEarned'>) => number;
 
+  /**
+   * Record that a single drill timer finished, so the drill can be continued
+   * later and its time counts toward today's daily practice goal. Scoped to the
+   * given local day; a new day resets the accumulated progress. Finishing the
+   * same timer again (e.g. "run again") is idempotent — it is credited once.
+   */
+  recordDrillFinished: (todayISO: string, videoId: string, timerIndex: number, timerMs: number) => void;
+
   buyFreeze: (settings: Settings) => PurchaseResult;
 
   replaceVault: (v: Vault) => void;
@@ -162,6 +170,18 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
     const history = [...withPoints.history, { ...entry, pointsEarned: earned }];
     commitActive(set, get, { ...withPoints, history });
     return earned;
+  },
+
+  recordDrillFinished: (todayISO, videoId, timerIndex, timerMs) => {
+    const p = get().progress;
+    const day = p.drillDay && p.drillDay.date === todayISO
+      ? p.drillDay
+      : { date: todayISO, practiceMs: 0, finished: {} as Record<string, number[]> };
+    const existing = day.finished[videoId] ?? [];
+    if (existing.includes(timerIndex)) return; // already credited today — idempotent
+    const finished = { ...day.finished, [videoId]: [...existing, timerIndex] };
+    const drillDay = { date: todayISO, practiceMs: day.practiceMs + Math.max(0, timerMs), finished };
+    commitActive(set, get, { ...p, drillDay });
   },
 
   buyFreeze: (settings) => {

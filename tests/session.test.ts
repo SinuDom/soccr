@@ -67,6 +67,32 @@ describe('session engine — practice-time accumulation', () => {
   });
 });
 
+describe('session engine — carried-over baseline', () => {
+  it('seeds total practice time with the baseline (finished drills from earlier today)', () => {
+    const now = 1_000_000;
+    const s = startSession({ mode: 'daily', firstVideoId: 'v1', targetMs: 60_000, now, baselineMs: 20_000 });
+    // Baseline counts even before any live drill contribution.
+    expect(totalPracticeMs(s)).toBe(20_000);
+  });
+
+  it('baseline plus live contribution reaches the daily target', () => {
+    const now = 1_000_000;
+    let s = startSession({ mode: 'daily', firstVideoId: 'v1', targetMs: 60_000, now, baselineMs: 40_000 });
+    // 40s carried over + 20s live = 60s target.
+    s = setActiveMs(s, 20_000);
+    s = tickDaily(s);
+    expect(totalPracticeMs(s)).toBe(60_000);
+    expect(s.phase).toBe('done');
+    expect(s.autoEnded).toBe(true);
+  });
+
+  it('defaults the baseline to zero when not provided', () => {
+    const s = startSession({ mode: 'daily', firstVideoId: 'v1', targetMs: 60_000, now: 0 });
+    expect(s.baselineMs).toBe(0);
+    expect(totalPracticeMs(s)).toBe(0);
+  });
+});
+
 describe('session engine — daily auto-end', () => {
   it('tickDaily auto-ends the instant total reaches target', () => {
     const now = 1_000_000;

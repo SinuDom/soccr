@@ -19,6 +19,13 @@ export function Home() {
   const activeUser = getUser(content, activeUserId);
   const libSize = activeUser?.videos.length ?? 0;
 
+  // Daily practice progress carried by finished drill timers today. Once the
+  // goal is completed it reads as full.
+  const targetMs = content ? content.settings.sessionTargetMinutes * 60_000 : 0;
+  const dailyMs = progress.drillDay && progress.drillDay.date === today ? progress.drillDay.practiceMs : 0;
+  const dailyProgress = doneToday ? 1 : targetMs > 0 ? Math.min(1, dailyMs / targetMs) : 0;
+  const dailyPct = Math.round(dailyProgress * 100);
+
   useEffect(() => {
     if (freezeConsumedNotice || streakResetNotice) {
       const t = setTimeout(dismissNotices, 6000);
@@ -103,11 +110,26 @@ export function Home() {
         </div>
       </motion.section>
 
+      {/* Phones: the Start button lives in the bottom dock, so surface the daily
+          practice progress as a separate bar here. */}
+      <div className="lg:hidden mb-6">
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-[11px] uppercase tracking-widest text-white/50">Daily practice</span>
+          <span className="text-[11px] uppercase tracking-widest text-white/50 tabular">{dailyPct}%</span>
+        </div>
+        <div className="h-3 w-full overflow-hidden rounded-full border border-ink-700 bg-ink-800">
+          <motion.div
+            className="h-full rounded-full bg-pitch-500"
+            initial={false}
+            animate={{ width: `${dailyPct}%` }}
+            transition={{ type: 'tween', ease: 'easeOut', duration: 0.4 }}
+          />
+        </div>
+      </div>
+
       {/* Desktop / landscape actions. On phones the bottom dock takes over. */}
       <div className="hidden lg:grid grid-cols-1 gap-3">
-        <Button variant="primary" size="xl" fullWidth icon="play" onClick={() => nav('/session/daily')} disabled={libSize === 0}>
-          Start daily session
-        </Button>
+        <StartDailyButton progress={dailyProgress} disabled={libSize === 0} onClick={() => nav('/session/daily')} />
         <div className="grid grid-cols-2 gap-3">
           <ExtraTimeButton
             locked={!doneToday}
@@ -139,5 +161,52 @@ export function Home() {
 
       <BottomDock disabled={libSize === 0} extraLocked={!doneToday} />
     </div>
+  );
+}
+
+/**
+ * The primary "Start daily session" button with the day's practice progress
+ * rendered as a fill inside it (a subtle bar that grows toward the goal). Once
+ * the goal is complete it reads full and relabels.
+ */
+function StartDailyButton({
+  progress,
+  disabled,
+  onClick,
+}: {
+  progress: number;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  const pct = Math.round(Math.min(1, Math.max(0, progress)) * 100);
+  const complete = progress >= 1;
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      aria-label={`Start daily session — ${pct}% of today's goal done`}
+      className={[
+        'relative h-16 w-full overflow-hidden rounded-2xl text-xl font-semibold text-ink-950 select-none',
+        'bg-pitch-600 shadow-glow',
+        'transition-[transform] duration-150 ease-out active:scale-[0.97] motion-reduce:transform-none',
+        'disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pitch-400 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-950',
+      ].join(' ')}
+    >
+      {/* Practice-progress fill. */}
+      <motion.span
+        aria-hidden
+        className="absolute inset-y-0 left-0 bg-pitch-400"
+        initial={false}
+        animate={{ width: `${pct}%` }}
+        transition={{ type: 'tween', ease: 'easeOut', duration: 0.4 }}
+      />
+      <span className="relative z-10 flex items-center justify-center gap-3">
+        <Icon name="play" size={22} />
+        {complete ? 'Daily goal complete' : 'Start daily session'}
+        <span className="tabular text-base font-bold opacity-80">{pct}%</span>
+      </span>
+    </button>
   );
 }

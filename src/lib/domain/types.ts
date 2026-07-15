@@ -40,6 +40,20 @@ export interface HistoryEntry {
   completedDaily?: boolean;  // true iff daily-mode session credited the streak
 }
 
+/**
+ * Persisted per-day drill progress. Lets a user leave a daily session and
+ * continue later: every drill timer that has been finished at least once is
+ * recorded here (per video), and the credited practice time from those
+ * finished timers is accumulated so it still counts toward the daily goal when
+ * they come back. It is scoped to a single local day (`date`); a new day starts
+ * fresh.
+ */
+export interface DrillDayProgress {
+  date: string;                          // YYYY-MM-DD local this progress applies to
+  practiceMs: number;                    // credited daily practice time from finished timers today
+  finished: Record<string, number[]>;    // videoId -> finished timer indices (0-based)
+}
+
 export interface Progress {
   schemaVersion: number;
   currentStreak: number;
@@ -50,6 +64,8 @@ export interface Progress {
   seenVideoIds: string[];
   cycleNumber: number;
   history: HistoryEntry[];
+  /** Persisted finished-drill progress for the current local day (optional). */
+  drillDay?: DrillDayProgress;
 }
 
 /** Version of the inner per-user Progress object. */

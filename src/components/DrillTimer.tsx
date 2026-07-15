@@ -31,6 +31,21 @@ interface Props {
   locked?: boolean;
   /** Diameter of the countdown ring in px (shrinks on small screens). */
   size?: number;
+  /**
+   * This timer was already finished earlier today (its time is persisted and
+   * already counted in the session baseline). It starts in the "done" state and
+   * contributes 0 live so it is not double-counted, letting the user continue
+   * the drill where they left off.
+   */
+  preCounted?: boolean;
+  /**
+   * When true (daily mode), finishing this timer credits its time permanently
+   * for the day: it stays counted even if reset afterwards, and `onFinished`
+   * fires so the parent can persist it.
+   */
+  persistFinished?: boolean;
+  /** Fired once whenever this timer reaches zero (used to persist the finish). */
+  onFinished?: () => void;
 }
 
 /**
@@ -39,20 +54,29 @@ interface Props {
  * much time is left. It can be paused/resumed while running and, when it
  * reaches zero, flips to a "done" state and can be run again.
  */
-export function DrillTimer({ seconds, index, label: customLabel, onChange, onActiveChange, locked = false, size = 132 }: Props) {
+export function DrillTimer({ seconds, index, label: customLabel, onChange, onActiveChange, locked = false, size = 132, preCounted = false, persistFinished = false, onFinished }: Props) {
   const totalMs = Math.max(1, Math.round(seconds * 1000));
-  const [phase, setPhase] = useState<Phase>('idle');
-  const [remainingMs, setRemainingMs] = useState(totalMs);
-  const [completedOnce, setCompletedOnce] = useState(false);
+  const [phase, setPhase] = useState<Phase>(preCounted ? 'done' : 'idle');
+  const [remainingMs, setRemainingMs] = useState(preCounted ? 0 : totalMs);
+  const [completedOnce, setCompletedOnce] = useState(preCounted);
   const [lockFlash, setLockFlash] = useState(false);
   const endAtRef = useRef<number>(0);
+  const onFinishedRef = useRef(onFinished);
+  onFinishedRef.current = onFinished;
 
-  // Reset if the drill duration changes (e.g. moving to another video).
+  // Reset if the drill duration changes (e.g. moving to another video), or
+  // start pre-finished when this timer was already completed earlier today.
   useEffect(() => {
-    setPhase('idle');
-    setRemainingMs(totalMs);
-    setCompletedOnce(false);
-  }, [totalMs]);
+    if (preCounted) {
+      setPhase('done');
+      setRemainingMs(0);
+      setCompletedOnce(true);
+    } else {
+      setPhase('idle');
+      setRemainingMs(totalMs);
+      setCompletedOnce(false);
+    }
+  }, [totalMs, preCounted]);
 
   // Report whether this timer currently occupies the single "running" slot so
   // the parent can lock the other timers (only one may run at a time).
@@ -76,9 +100,19 @@ export function DrillTimer({ seconds, index, label: customLabel, onChange, onAct
   // the full duration. This drives the live session progress bar and lets a
   // reset subtract its time again.
   useEffect(() => {
-    const elapsed = phase === 'idle' ? 0 : totalMs - remainingMs;
+    let elapsed: number;
+    if (preCounted) {
+      // Already counted in the session baseline; never contribute live again.
+      elapsed = 0;
+    } else if (persistFinished && completedOnce) {
+      // Daily mode: once finished, the time is credited for the day and stays
+      // counted even if the user resets to redo the exercise.
+      elapsed = totalMs;
+    } else {
+      elapsed = phase === 'idle' ? 0 : totalMs - remainingMs;
+    }
     onChange?.(Math.max(0, elapsed), completedOnce);
-  }, [remainingMs, phase, completedOnce, totalMs, onChange]);
+  }, [remainingMs, phase, completedOnce, totalMs, onChange, preCounted, persistFinished]);
 
   useEffect(() => {
     if (phase !== 'running') return;
@@ -90,6 +124,7 @@ export function DrillTimer({ seconds, index, label: customLabel, onChange, onAct
         setPhase('done');
         setCompletedOnce(true);
         playFinishedChime();
+        onFinishedRef.current?.();
         return;
       }
       setRemainingMs(left);
@@ -237,19 +272,32 @@ function ControlButton({
  *    completing every timer credits the sum of their durations, and a reset
  *    subtracts that timer's time again).
  *  - `onAllDoneChange`: whether every timer has been finished at least once.
+ *  - `onTimerFinished`: fired with the timer index whenever a timer reaches
+ *    zero, so the parent can persist the finished drill (daily mode).
+ *
+ * `finishedIndices` lists timers that were already finished earlier today: they
+ * start in the "done" state and contribute 0 live (their time is already in the
+ * session baseline), letting a drill be continued rather than restarted.
  */
 export function DrillTimers({
   seconds,
   titles,
+  finishedIndices,
+  persistFinished = false,
   onElapsedChange,
   onAllDoneChange,
+  onTimerFinished,
 }: {
   seconds?: number;
   titles?: string[];
+  finishedIndices?: number[];
+  persistFinished?: boolean;
   onElapsedChange?: (elapsedMs: number) => void;
   onAllDoneChange?: (allDone: boolean) => void;
+  onTimerFinished?: (index: number) => void;
 }) {
   const count = seconds && seconds >= 1 ? Math.max(1, titles?.length ?? 1) : 0;
+  const preset = finishedIndices ?? [];
 
   const elapsedRef = useRef<number[]>([]);
   const doneRef = useRef<boolean[]>([]);
@@ -261,12 +309,13 @@ export function DrillTimers({
   // moving to another video) so stale contributions don't leak across drills.
   useEffect(() => {
     elapsedRef.current = Array(count).fill(0);
-    doneRef.current = Array(count).fill(false);
+    // Timers finished earlier today start already "done" and count 0 live.
+    doneRef.current = Array.from({ length: count }, (_, i) => preset.includes(i));
     setActiveIndex(null);
     onElapsedChange?.(0);
-    onAllDoneChange?.(count === 0);
+    onAllDoneChange?.(count > 0 ? doneRef.current.every(Boolean) : true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [count, seconds]);
+  }, [count, seconds, finishedIndices]);
 
   // Rings are large on desktop/iPad but shrink on phones so a full drill (video
   // + timers + controls) fits one portrait screen without scrolling.
@@ -315,6 +364,9 @@ export function DrillTimers({
             label={titles?.[i]}
             size={ringSize}
             locked={activeIndex !== null && activeIndex !== i}
+            preCounted={preset.includes(i)}
+            persistFinished={persistFinished}
+            onFinished={() => onTimerFinished?.(i)}
             onActiveChange={(active) => handleChildActive(i, active)}
             onChange={(elapsedMs, completedOnce) => handleChildChange(i, elapsedMs, completedOnce)}
           />

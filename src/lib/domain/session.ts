@@ -14,6 +14,7 @@ export interface Session {
   phase: SessionPhase;
   rounds: RoundRecord[];      // completed rounds; the active round is separate
   activeMs: number;           // practice time accumulated for the active video
+  baselineMs: number;         // drill time already credited today before this session (persisted)
   discarded: boolean;         // true iff endEarly() was called
   autoEnded: boolean;         // true iff target hit (Mode A)
   startedAt: number;
@@ -24,6 +25,12 @@ export function startSession(params: {
   firstVideoId: string;
   targetMs: number | null;
   now: number;
+  /**
+   * Drill time already credited earlier today (from finished drill timers that
+   * were persisted). It seeds the session so a daily goal can be continued
+   * across visits. Defaults to 0.
+   */
+  baselineMs?: number;
 }): Session {
   return {
     mode: params.mode,
@@ -32,6 +39,7 @@ export function startSession(params: {
     phase: 'practicing',
     rounds: [],
     activeMs: 0,
+    baselineMs: Math.max(0, params.baselineMs ?? 0),
     discarded: false,
     autoEnded: false,
     startedAt: params.now,
@@ -75,10 +83,13 @@ export function pressNext(
   };
 }
 
-/** Total practice time — banked rounds plus the active video's current time. */
+/**
+ * Total practice time — drill time carried over from earlier today
+ * (`baselineMs`) plus banked rounds plus the active video's current time.
+ */
 export function totalPracticeMs(session: Session, _now?: number): number {
   const past = session.rounds.reduce((a, r) => a + r.practiceMs, 0);
-  return past + session.activeMs;
+  return session.baselineMs + past + session.activeMs;
 }
 
 /**

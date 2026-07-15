@@ -43,6 +43,7 @@ export function SessionScreen() {
   const advanceCycle = useProgressStore((s) => s.advanceCycle);
   const creditDaily = useProgressStore((s) => s.creditDaily);
   const bankExtraTime = useProgressStore((s) => s.bankExtraTime);
+  const recordDrillFinished = useProgressStore((s) => s.recordDrillFinished);
 
   const activeUser = getUser(content, activeUserId);
   const libraryVideos = activeUser?.videos ?? [];
@@ -55,6 +56,11 @@ export function SessionScreen() {
   const [showIntro, setShowIntro] = useState(true);
   const startedAtRef = useRef<number>(0);
   const initedRef = useRef(false);
+  // Snapshot of the drill-timer indices already finished for the ACTIVE video,
+  // captured once per video. Kept stable during the session so persisting a
+  // freshly finished timer doesn't retroactively mark the running timers as
+  // "already counted" and drop their contribution.
+  const finishedSnapshotRef = useRef<{ videoId: string; indices: number[] } | null>(null);
 
   const targetMs = mode === 'daily' && content ? content.settings.sessionTargetMinutes * 60_000 : null;
 
@@ -78,7 +84,12 @@ export function SessionScreen() {
     if (!firstId) return;
     const now = Date.now();
     startedAtRef.current = now;
-    setSession(startSession({ mode: effectiveMode, firstVideoId: firstId, targetMs, now }));
+    // Daily goals can be continued across visits: seed the session with the
+    // drill time already credited earlier today from finished drill timers.
+    const today = toLocalDateString(new Date());
+    const dd = progress.drillDay && progress.drillDay.date === today ? progress.drillDay : null;
+    const baselineMs = mode === 'daily' ? (dd?.practiceMs ?? 0) : 0;
+    setSession(startSession({ mode: effectiveMode, firstVideoId: firstId, targetMs, now, baselineMs }));
   }, [content, activeUser, manualId, targetMs, progress.seenVideoIds, progress.cycleNumber, advanceCycle, effectiveMode, libraryVideos]);
 
   // Play the start-of-session intro once, then reveal the practice screen.
@@ -147,6 +158,21 @@ export function SessionScreen() {
   const handleAllDoneChange = useCallback((allDone: boolean) => {
     setDrillsAllDone(allDone);
   }, []);
+
+  // Persist each finished drill timer (daily mode) so the drill can be
+  // continued later and its time keeps counting toward today's goal.
+  const handleTimerFinished = useCallback((index: number) => {
+    setSession((s) => {
+      if (!s || effectiveMode !== 'daily') return s;
+      const v = libraryVideos.find((x) => x.id === s.activeVideoId);
+      const timerMs = (v?.timer ?? 0) * 1000;
+      if (timerMs > 0) {
+        const today = toLocalDateString(new Date());
+        recordDrillFinished(today, s.activeVideoId, index, timerMs);
+      }
+      return s;
+    });
+  }, [effectiveMode, libraryVideos, recordDrillFinished]);
 
   const handleLoadError = useCallback(() => { setLoadFailed(true); }, []);
 
@@ -260,6 +286,19 @@ export function SessionScreen() {
   const sessionProgress = targetMs ? Math.min(1, totalPracticeMs(session, Date.now()) / targetMs) : null;
   const startLabel = mode === 'daily' ? 'Daily practice' : effectiveMode === 'manual' ? 'Manual pick' : 'Extra time';
 
+  // Resolve the finished-timer snapshot for the active video, refreshing it
+  // only when the active video changes (see finishedSnapshotRef).
+  const persistDrills = effectiveMode === 'daily';
+  if (persistDrills && finishedSnapshotRef.current?.videoId !== session.activeVideoId) {
+    const today = toLocalDateString(new Date());
+    const dd = progress.drillDay && progress.drillDay.date === today ? progress.drillDay : null;
+    finishedSnapshotRef.current = {
+      videoId: session.activeVideoId,
+      indices: dd?.finished[session.activeVideoId] ?? [],
+    };
+  }
+  const finishedIndices = persistDrills ? (finishedSnapshotRef.current?.indices ?? []) : [];
+
   return (
     <div className="h-dvh overflow-hidden lg:h-auto lg:min-h-dvh lg:overflow-visible flex flex-col p-3 sm:p-6 max-w-2xl lg:max-w-5xl mx-auto w-full">
       <SessionHeader
@@ -282,11 +321,14 @@ export function SessionScreen() {
               onSkip={handleSkip}
               onDrillElapsedChange={handleDrillElapsed}
               onDrillAllDoneChange={handleAllDoneChange}
+              onDrillTimerFinished={handleTimerFinished}
               onLoadError={handleLoadError}
               loadFailed={loadFailed}
               mode={effectiveMode}
               activeVideo={activeVideo}
               libraryMode={libraryMode}
+              finishedIndices={finishedIndices}
+              persistDrills={persistDrills}
             />
           ) : null}
         </AnimatePresence>
@@ -414,11 +456,14 @@ function PracticeArea({
   onSkip,
   onDrillElapsedChange,
   onDrillAllDoneChange,
+  onDrillTimerFinished,
   onLoadError,
   loadFailed,
   mode,
   activeVideo,
   libraryMode,
+  finishedIndices,
+  persistDrills,
 }: {
   session: Session;
   targetMs: number | null;
@@ -427,11 +472,14 @@ function PracticeArea({
   onSkip: () => void;
   onDrillElapsedChange: (elapsedMs: number) => void;
   onDrillAllDoneChange: (allDone: boolean) => void;
+  onDrillTimerFinished: (index: number) => void;
   onLoadError: () => void;
   loadFailed: boolean;
   mode: SessionMode;
   activeVideo: VideoRef;
   libraryMode: boolean;
+  finishedIndices: number[];
+  persistDrills: boolean;
 }) {
   const total = totalPracticeMs(session);
   // Vertical Shorts get a narrower, portrait-friendly column so they don't sit
@@ -503,8 +551,11 @@ function PracticeArea({
           <DrillTimers
             seconds={activeVideo.timer}
             titles={activeVideo.timerTitles}
+            finishedIndices={finishedIndices}
+            persistFinished={persistDrills}
             onElapsedChange={onDrillElapsedChange}
             onAllDoneChange={onDrillAllDoneChange}
+            onTimerFinished={onDrillTimerFinished}
           />
         )}
 
