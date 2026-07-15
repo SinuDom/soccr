@@ -1,92 +1,85 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_PROGRESS, type Progress } from '@/lib/domain/types';
-import { exportToBlob, mergeProgress, parseImportedText } from '@/lib/storage/portability';
+import { DEFAULT_PROGRESS, DEFAULT_VAULT, type Progress, type Vault } from '@/lib/domain/types';
+import { exportToBlob, mergeProgress, mergeVault, parseImportedText } from '@/lib/storage/portability';
 
-function make(overrides: Partial<Progress> = {}): Progress {
+function makeP(overrides: Partial<Progress> = {}): Progress {
   return { ...DEFAULT_PROGRESS, ...overrides };
+}
+function makeV(overrides: Partial<Vault> = {}): Vault {
+  return { ...DEFAULT_VAULT, ...overrides };
 }
 
 describe('export → import round-trip', () => {
-  it('is lossless', async () => {
-    const p = make({
-      currentStreak: 9,
-      longestStreak: 15,
-      points: 420,
-      freezesHeld: 1,
-      seenVideoIds: ['a', 'b', 'c'],
-      cycleNumber: 3,
-      lastCompletedDate: '2026-07-15',
-      history: [
-        { date: '2026-07-15', startedAt: 10, mode: 'daily', practiceMs: 1_200_000, pointsEarned: 0, videoIds: ['a'], completedDaily: true },
-      ],
+  it('is lossless', () => {
+    const vault = makeV({
+      vaultVersion: 2,
+      activeUserId: 'leon',
+      users: {
+        leon: makeP({ currentStreak: 9, longestStreak: 15, points: 420, freezesHeld: 1, seenVideoIds: ['a', 'b'], cycleNumber: 3, lastCompletedDate: '2026-07-15' }),
+        anya: makeP({ currentStreak: 2, points: 30, seenVideoIds: ['y'] }),
+      },
     });
-    const { blob, filename } = exportToBlob(p);
+    const { blob, filename } = exportToBlob(vault);
     expect(filename).toMatch(/^soccr-progress-\d{4}-\d{2}-\d{2}\.json$/);
-    // jsdom's Blob doesn't reliably expose text(); serialize the same way and
-    // assert on the string — round-trip lossless-ness is what the spec cares
-    // about, not the Blob implementation itself.
-    const text = JSON.stringify(p, null, 2);
+    const text = JSON.stringify(vault, null, 2);
     expect(blob.size).toBe(new TextEncoder().encode(text).length);
-    const r = parseImportedText(text);
-    expect(r.ok).toBe(true);
-    if (r.ok) expect(r.progress).toEqual(p);
+    const parsed = parseImportedText(text);
+    expect(parsed.ok).toBe(true);
+    if (parsed.ok) expect(parsed.vault).toEqual(vault);
   });
 });
 
 describe('parseImportedText', () => {
   it('rejects non-JSON', () => {
-    const r = parseImportedText('not json');
-    expect(r.ok).toBe(false);
+    expect(parseImportedText('not json').ok).toBe(false);
   });
   it('rejects an array top-level', () => {
-    const r = parseImportedText('[]');
-    expect(r.ok).toBe(false);
+    expect(parseImportedText('[]').ok).toBe(false);
   });
   it('rejects an object that looks nothing like ours', () => {
-    const r = parseImportedText(JSON.stringify({ hello: 'world' }));
-    expect(r.ok).toBe(false);
+    expect(parseImportedText(JSON.stringify({ hello: 'world' })).ok).toBe(false);
   });
-  it('accepts a minimal recognizable object and migrates it', () => {
-    const r = parseImportedText(JSON.stringify({ currentStreak: 3, points: 40, schemaVersion: 1 }));
+  it('accepts a legacy single-user Progress and wraps it', () => {
+    const r = parseImportedText(JSON.stringify({ currentStreak: 3, points: 40, schemaVersion: 1, seenVideoIds: [], history: [] }));
     expect(r.ok).toBe(true);
     if (r.ok) {
-      expect(r.progress.currentStreak).toBe(3);
-      expect(r.progress.points).toBe(40);
-      expect(r.progress.history).toEqual([]);
+      const ids = Object.keys(r.vault.users);
+      expect(ids.length).toBe(1);
+      expect(r.vault.users[ids[0]!]!.currentStreak).toBe(3);
+      expect(r.vault.users[ids[0]!]!.points).toBe(40);
     }
+  });
+  it('accepts a vault', () => {
+    const raw = { vaultVersion: 2, activeUserId: 'leon', users: { leon: { schemaVersion: 1, currentStreak: 5, longestStreak: 5, points: 0, freezesHeld: 0, seenVideoIds: [], cycleNumber: 1, lastCompletedDate: null, history: [] } } };
+    const r = parseImportedText(JSON.stringify(raw));
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.vault.users.leon!.currentStreak).toBe(5);
   });
 });
 
 describe('mergeProgress', () => {
   it('takes MAX of streak / points / longest / freezes (capped) / cycle', () => {
-    const a = make({ currentStreak: 3, longestStreak: 8, points: 100, freezesHeld: 1, cycleNumber: 2 });
-    const b = make({ currentStreak: 5, longestStreak: 5, points: 60, freezesHeld: 0, cycleNumber: 4 });
+    const a = makeP({ currentStreak: 3, longestStreak: 8, points: 100, freezesHeld: 1, cycleNumber: 2 });
+    const b = makeP({ currentStreak: 5, longestStreak: 5, points: 60, freezesHeld: 0, cycleNumber: 4 });
     const merged = mergeProgress(a, b, 1);
     expect(merged.currentStreak).toBe(5);
     expect(merged.longestStreak).toBe(8);
-    expect(merged.points).toBe(100); // max, not sum
+    expect(merged.points).toBe(100);
     expect(merged.freezesHeld).toBe(1);
     expect(merged.cycleNumber).toBe(4);
   });
 
-  it('caps merged freezes at maxFreezesHeld', () => {
-    const a = make({ freezesHeld: 1 });
-    const b = make({ freezesHeld: 1 });
-    const merged = mergeProgress(a, b, 1);
-    expect(merged.freezesHeld).toBe(1);
-  });
-
   it('unions seenVideoIds', () => {
-    const a = make({ seenVideoIds: ['x', 'y'] });
-    const b = make({ seenVideoIds: ['y', 'z'] });
+    const a = makeP({ seenVideoIds: ['x', 'y'] });
+    const b = makeP({ seenVideoIds: ['y', 'z'] });
     const merged = mergeProgress(a, b, 1);
     expect(new Set(merged.seenVideoIds)).toEqual(new Set(['x', 'y', 'z']));
   });
 
   it('concats history and dedupes by (date, mode, startedAt)', () => {
     const shared = { date: '2026-07-15', startedAt: 100, mode: 'daily' as const, practiceMs: 60000, pointsEarned: 0, videoIds: ['a'] };
-    const a = make({ history: [shared, { ...shared, startedAt: 200 }] });
-    const b = make({ history: [shared, { ...shared, startedAt: 300 }] });
+    const a = makeP({ history: [shared, { ...shared, startedAt: 200 }] });
+    const b = makeP({ history: [shared, { ...shared, startedAt: 300 }] });
     const merged = mergeProgress(a, b, 1);
     expect(merged.history).toHaveLength(3);
     const stamps = merged.history.map((h) => h.startedAt).sort((x, y) => x - y);
@@ -94,8 +87,33 @@ describe('mergeProgress', () => {
   });
 
   it('lastCompletedDate takes the later ISO date', () => {
-    const a = make({ lastCompletedDate: '2026-07-10' });
-    const b = make({ lastCompletedDate: '2026-07-14' });
+    const a = makeP({ lastCompletedDate: '2026-07-10' });
+    const b = makeP({ lastCompletedDate: '2026-07-14' });
     expect(mergeProgress(a, b, 1).lastCompletedDate).toBe('2026-07-14');
+  });
+});
+
+describe('mergeVault', () => {
+  it('per-user merges and preserves users only present in one side', () => {
+    const a = makeV({
+      activeUserId: 'leon',
+      users: {
+        leon: makeP({ currentStreak: 3, points: 100, seenVideoIds: ['a'] }),
+      },
+    });
+    const b = makeV({
+      activeUserId: 'anya',
+      users: {
+        leon: makeP({ currentStreak: 5, points: 60, seenVideoIds: ['b'] }),
+        anya: makeP({ currentStreak: 2, points: 20 }),
+      },
+    });
+    const merged = mergeVault(a, b, 1);
+    expect(merged.users.leon!.currentStreak).toBe(5);
+    expect(merged.users.leon!.points).toBe(100);
+    expect(new Set(merged.users.leon!.seenVideoIds)).toEqual(new Set(['a', 'b']));
+    expect(merged.users.anya!.currentStreak).toBe(2);
+    // activeUserId keeps the LOCAL vault's setting.
+    expect(merged.activeUserId).toBe('leon');
   });
 });

@@ -2,21 +2,22 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useProgressStore } from '@/store/progressStore';
-import { useContentStore } from '@/store/contentStore';
+import { useContentStore, getUser } from '@/store/contentStore';
 import { Button } from '@/components/Button';
 import { StreakFlame } from '@/components/StreakFlame';
+import { UserSwitcher } from '@/components/UserSwitcher';
 import { toLocalDateString } from '@/lib/domain/streak';
 
 export function Home() {
   const nav = useNavigate();
-  const { progress, freezeConsumedNotice, streakResetNotice, dismissNotices } = useProgressStore();
+  const { progress, activeUserId, freezeConsumedNotice, streakResetNotice, dismissNotices } = useProgressStore();
   const content = useContentStore((s) => s.content);
   const today = toLocalDateString(new Date());
   const doneToday = progress.lastCompletedDate === today;
-  const libSize = content?.videos.length ?? 0;
+  const activeUser = getUser(content, activeUserId);
+  const libSize = activeUser?.videos.length ?? 0;
 
   useEffect(() => {
-    // Auto-dismiss notices after the user has seen the Home screen for 6s.
     if (freezeConsumedNotice || streakResetNotice) {
       const t = setTimeout(dismissNotices, 6000);
       return () => clearTimeout(t);
@@ -30,7 +31,7 @@ export function Home() {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ type: 'spring', stiffness: 260, damping: 24 }}
-        className="flex items-center justify-between mb-8"
+        className="flex items-center justify-between mb-6"
       >
         <div>
           <h1 className="text-3xl font-black tracking-tight">Soccr</h1>
@@ -38,6 +39,12 @@ export function Home() {
         </div>
         <Link to="/settings" className="text-white/70 hover:text-white text-2xl" aria-label="Settings">⚙︎</Link>
       </motion.header>
+
+      {content && content.users.length > 0 && (
+        <div className="mb-4">
+          <UserSwitcher users={content.users} />
+        </div>
+      )}
 
       {(freezeConsumedNotice || streakResetNotice) && (
         <motion.div
@@ -98,14 +105,16 @@ export function Home() {
 
       {libSize === 0 && (
         <div className="mt-6 rounded-2xl p-4 bg-amber-500/10 border border-amber-500/30 text-amber-100 text-sm">
-          Your library is empty. Add YouTube / Instagram / TikTok links to
-          <code className="mx-1 rounded bg-black/30 px-1">public/content.json</code>
-          on GitHub, then redeploy.
+          {activeUser
+            ? <>No videos for {activeUser.name} yet. Add some under <code className="mx-1 rounded bg-black/30 px-1">users</code> in <code className="rounded bg-black/30 px-1">public/content.json</code> on GitHub.</>
+            : <>Your library is empty. Edit <code className="mx-1 rounded bg-black/30 px-1">public/content.json</code> on GitHub, then redeploy.</>}
         </div>
       )}
 
       <footer className="mt-auto pt-8 text-center text-white/40 text-xs">
-        {content ? `${libSize} videos in library · cycle ${progress.cycleNumber}` : 'Loading library…'}
+        {activeUser
+          ? `${libSize} videos for ${activeUser.name} · cycle ${progress.cycleNumber}`
+          : 'Loading library…'}
       </footer>
     </div>
   );

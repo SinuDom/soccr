@@ -1,23 +1,23 @@
-import type { HistoryEntry, Progress } from '@/lib/domain/types';
-import { DEFAULT_PROGRESS } from '@/lib/domain/types';
-import { migrate } from './migrate';
+import type { HistoryEntry, Progress, Vault } from '@/lib/domain/types';
+import { DEFAULT_PROGRESS, DEFAULT_VAULT } from '@/lib/domain/types';
+import { migrateVault } from './migrate';
 
-export function exportToBlob(progress: Progress): { blob: Blob; filename: string } {
+export function exportToBlob(vault: Vault): { blob: Blob; filename: string } {
   const stamp = new Date().toISOString().slice(0, 10);
   return {
-    blob: new Blob([JSON.stringify(progress, null, 2)], { type: 'application/json' }),
+    blob: new Blob([JSON.stringify(vault, null, 2)], { type: 'application/json' }),
     filename: `soccr-progress-${stamp}.json`,
   };
 }
 
 export type ParseResult =
-  | { ok: true; progress: Progress }
+  | { ok: true; vault: Vault }
   | { ok: false; error: string };
 
 /**
- * Parse + validate a user-supplied JSON file. The migrator handles unknown
- * schemas so this is quite forgiving; we only reject on shapes that clearly
- * aren't ours (missing all recognized fields).
+ * Parse a user-supplied backup. Accepts either a Vault or a legacy single-user
+ * Progress (the migrator wraps it). Very forgiving so that files exported by
+ * older builds still work.
  */
 export function parseImportedText(text: string): ParseResult {
   let raw: unknown;
@@ -29,24 +29,39 @@ export function parseImportedText(text: string): ParseResult {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
     return { ok: false, error: 'JSON must be an object.' };
   }
-  const known = ['currentStreak', 'longestStreak', 'points', 'seenVideoIds', 'history', 'schemaVersion'];
+  const known = ['currentStreak', 'longestStreak', 'points', 'seenVideoIds', 'history', 'schemaVersion', 'users', 'vaultVersion', 'activeUserId'];
   const hits = known.filter((k) => k in (raw as Record<string, unknown>));
   if (hits.length < 2) {
-    return { ok: false, error: "This doesn't look like a Soccr progress file." };
+    return { ok: false, error: "This doesn't look like a Soccr backup file." };
   }
-  return { ok: true, progress: migrate(raw) };
+  return { ok: true, vault: migrateVault(raw) };
 }
 
 /**
- * Non-destructive merge:
- *   currentStreak / longestStreak / points / freezesHeld / cycleNumber → max
- *   seenVideoIds → union
- *   history → concat, dedup by (date, mode, startedAt)
- *   lastCompletedDate → later of the two
- *   freezesHeld capped by maxFreezesHeld (passed in).
- * We take max rather than sum for points so re-importing the same file
- * cannot inflate a balance.
+ * Non-destructive merge across two vaults:
+ *   * activeUserId → taken from `a` (the local vault) so importing doesn't
+ *     silently switch which user is shown.
+ *   * users → per-user merge (see mergeProgress). Users only in one vault are
+ *     copied over as-is.
  */
+export function mergeVault(a: Vault, b: Vault, maxFreezes: number): Vault {
+  const ids = new Set<string>([...Object.keys(a.users), ...Object.keys(b.users)]);
+  const users: Record<string, Progress> = {};
+  for (const id of ids) {
+    const ap = a.users[id];
+    const bp = b.users[id];
+    if (ap && bp) users[id] = mergeProgress(ap, bp, maxFreezes);
+    else users[id] = { ...(ap ?? bp ?? { ...DEFAULT_PROGRESS }) };
+  }
+  return {
+    ...DEFAULT_VAULT,
+    vaultVersion: Math.max(a.vaultVersion, b.vaultVersion),
+    activeUserId: a.activeUserId || b.activeUserId,
+    users,
+  };
+}
+
+/** Per-user merge — same rules as before (max, not sum). */
 export function mergeProgress(a: Progress, b: Progress, maxFreezes: number): Progress {
   const seen = new Set<string>([...a.seenVideoIds, ...b.seenVideoIds]);
   const historyMap = new Map<string, HistoryEntry>();
@@ -54,14 +69,12 @@ export function mergeProgress(a: Progress, b: Progress, maxFreezes: number): Pro
   for (const h of [...a.history, ...b.history]) historyMap.set(key(h), h);
   const history = Array.from(historyMap.values()).sort((x, y) => x.startedAt - y.startedAt);
 
-  const lastDate = laterDate(a.lastCompletedDate, b.lastCompletedDate);
-
   return {
     ...DEFAULT_PROGRESS,
     schemaVersion: Math.max(a.schemaVersion, b.schemaVersion),
     currentStreak: Math.max(a.currentStreak, b.currentStreak),
     longestStreak: Math.max(a.longestStreak, b.longestStreak, a.currentStreak, b.currentStreak),
-    lastCompletedDate: lastDate,
+    lastCompletedDate: laterDate(a.lastCompletedDate, b.lastCompletedDate),
     points: Math.max(a.points, b.points),
     freezesHeld: Math.min(maxFreezes, Math.max(a.freezesHeld, b.freezesHeld)),
     seenVideoIds: Array.from(seen),
@@ -73,5 +86,5 @@ export function mergeProgress(a: Progress, b: Progress, maxFreezes: number): Pro
 function laterDate(a: string | null, b: string | null): string | null {
   if (!a) return b;
   if (!b) return a;
-  return a > b ? a : b; // ISO YYYY-MM-DD is lexicographically ordered
+  return a > b ? a : b;
 }

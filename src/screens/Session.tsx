@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { useContentStore } from '@/store/contentStore';
+import { useContentStore, getUser } from '@/store/contentStore';
 import { useProgressStore } from '@/store/progressStore';
 import type { VideoRef, SessionMode, HistoryEntry } from '@/lib/domain/types';
 import { markSeen as markSeenPure, pickNextVideo } from '@/lib/domain/selection';
@@ -35,13 +35,16 @@ export function SessionScreen() {
   const effectiveMode: SessionMode = manualId ? 'manual' : mode;
 
   const content = useContentStore((s) => s.content);
+  const activeUserId = useProgressStore((s) => s.activeUserId);
   const progress = useProgressStore((s) => s.progress);
   const markSeenAction = useProgressStore((s) => s.markSeen);
   const advanceCycle = useProgressStore((s) => s.advanceCycle);
   const creditDaily = useProgressStore((s) => s.creditDaily);
   const bankExtraTime = useProgressStore((s) => s.bankExtraTime);
 
-  // Local, mutable session state that lives only for this screen.
+  const activeUser = getUser(content, activeUserId);
+  const libraryVideos = activeUser?.videos ?? [];
+
   const [session, setSession] = useState<Session | null>(null);
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -50,15 +53,15 @@ export function SessionScreen() {
 
   const targetMs = mode === 'daily' && content ? content.settings.sessionTargetMinutes * 60_000 : null;
 
-  // Bootstrap: pick the first video, start the session.
+  // Bootstrap: pick the first video from the ACTIVE USER's library.
   useEffect(() => {
-    if (!content || initedRef.current) return;
+    if (!content || !activeUser || initedRef.current) return;
     initedRef.current = true;
     let firstId: string | null = null;
-    if (manualId && content.videos.some((v) => v.id === manualId)) {
+    if (manualId && libraryVideos.some((v) => v.id === manualId)) {
       firstId = manualId;
     } else {
-      const libIds = content.videos.map((v) => v.id);
+      const libIds = libraryVideos.map((v) => v.id);
       const r = pickNextVideo({
         libraryIds: libIds,
         seenIds: progress.seenVideoIds,
@@ -71,10 +74,8 @@ export function SessionScreen() {
     const now = Date.now();
     startedAtRef.current = now;
     setSession(startSession({ mode: effectiveMode, firstVideoId: firstId, targetMs, now }));
-  }, [content, manualId, targetMs, progress.seenVideoIds, progress.cycleNumber, advanceCycle, effectiveMode]);
+  }, [content, activeUser, manualId, targetMs, progress.seenVideoIds, progress.cycleNumber, advanceCycle, effectiveMode, libraryVideos]);
 
-  // Daily-mode auto-end tick. rAF, cheap; the underlying math is wall-clock so
-  // being throttled by an inactive tab doesn't lose or add time.
   useEffect(() => {
     if (!session || session.phase !== 'practicing' || session.mode !== 'daily') return;
     let raf = 0;
@@ -86,7 +87,6 @@ export function SessionScreen() {
     return () => cancelAnimationFrame(raf);
   }, [session?.phase, session?.mode]);
 
-  // When the daily session auto-ends, credit & navigate.
   useEffect(() => {
     if (!session || session.phase !== 'done') return;
     if (session.discarded) {
@@ -102,7 +102,6 @@ export function SessionScreen() {
     const now = Date.now();
     const practiceMs = totalPracticeMs(s, now);
     const videoIds = videoIdsWatched(s);
-    // Ensure every watched video is marked seen (belt-and-braces).
     for (const id of videoIds) markSeenAction(id);
 
     if (s.mode === 'daily' && s.autoEnded) {
@@ -118,7 +117,6 @@ export function SessionScreen() {
       creditDaily(today, entry);
       nav(`/session/complete?mode=daily&ms=${practiceMs}`, { replace: true });
     } else {
-      // Extra Time or Manual: award points, log history.
       const entry: Omit<HistoryEntry, 'pointsEarned'> = {
         date: toLocalDateString(new Date()),
         startedAt: startedAtRef.current,
@@ -139,8 +137,7 @@ export function SessionScreen() {
 
   const handleSkip = useCallback(() => {
     if (!content || !session) return;
-    // Skip: pick a new video, don't mark seen, don't count time.
-    const libIds = content.videos.map((v) => v.id);
+    const libIds = libraryVideos.map((v) => v.id);
     const r = pickNextVideo({
       libraryIds: libIds,
       seenIds: progress.seenVideoIds,
@@ -150,23 +147,21 @@ export function SessionScreen() {
     if (!r.videoId) return;
     setLoadFailed(false);
     setSession((s) => (s ? { ...s, activeVideoId: r.videoId!, phase: 'watching' } : s));
-  }, [content, session, progress.seenVideoIds, progress.cycleNumber, advanceCycle]);
+  }, [content, session, libraryVideos, progress.seenVideoIds, progress.cycleNumber, advanceCycle]);
 
   const handleNext = useCallback(() => {
     if (!content || !session) return;
-    // Bank current round, mark the watched video seen, pick a new one.
     markSeenAction(session.activeVideoId);
-    const libIds = content.videos.map((v) => v.id);
+    const libIds = libraryVideos.map((v) => v.id);
     const r = pickNextVideo({
       libraryIds: libIds,
-      // Use "current seen + the one we just marked" for correctness within this tick.
       seenIds: markSeenPure(progress.seenVideoIds, session.activeVideoId),
       cycleNumber: progress.cycleNumber,
     });
     if (r.cycleAdvanced) advanceCycle(r.nextSeenIds, r.nextCycleNumber);
     if (!r.videoId) return;
     setSession((s) => (s ? pressNext(s, r.videoId!, Date.now()).session : s));
-  }, [content, session, progress.seenVideoIds, progress.cycleNumber, advanceCycle, markSeenAction]);
+  }, [content, session, libraryVideos, progress.seenVideoIds, progress.cycleNumber, advanceCycle, markSeenAction]);
 
   const handleStop = useCallback(() => {
     if (!session) return;
@@ -179,16 +174,26 @@ export function SessionScreen() {
   }, []);
 
   if (!content) return null;
+  if (!activeUser) {
+    return (
+      <div className="min-h-dvh grid place-items-center p-6 text-center">
+        <div>
+          <p className="mb-4">No user selected. Head home and pick one.</p>
+          <Button onClick={() => nav('/', { replace: true })}>Home</Button>
+        </div>
+      </div>
+    );
+  }
   if (!session) {
     return <div className="min-h-dvh grid place-items-center text-white/70">Loading…</div>;
   }
 
-  const activeVideo = content.videos.find((v) => v.id === session.activeVideoId) as VideoRef | undefined;
+  const activeVideo = libraryVideos.find((v) => v.id === session.activeVideoId) as VideoRef | undefined;
   if (!activeVideo) {
     return (
       <div className="min-h-dvh grid place-items-center p-6 text-center">
         <div>
-          <p className="mb-4">That video isn’t in the library anymore.</p>
+          <p className="mb-4">That video isn’t in {activeUser.name}’s library anymore.</p>
           <Button onClick={() => nav('/', { replace: true })}>Home</Button>
         </div>
       </div>
@@ -200,6 +205,7 @@ export function SessionScreen() {
       <SessionHeader
         session={session}
         targetMs={targetMs}
+        userName={activeUser.name}
         onQuit={() => setConfirmEnd(true)}
       />
 
@@ -211,15 +217,25 @@ export function SessionScreen() {
               <Button variant="secondary" onClick={handleSkip}>Skip to another video</Button>
             </div>
           ) : (
-            <VideoPlayer
-              key={activeVideo.id}
-              video={activeVideo}
-              onEnded={handleVideoEnded}
-              onLoadError={handleLoadError}
-            />
+            <>
+              <VideoPlayer
+                key={activeVideo.id}
+                video={activeVideo}
+                onEnded={handleVideoEnded}
+                onLoadError={handleLoadError}
+              />
+              <VideoMeta video={activeVideo} />
+            </>
           )
         ) : session.phase === 'practicing' ? (
-          <PracticeArea session={session} targetMs={targetMs} onNext={handleNext} onStop={handleStop} mode={effectiveMode} />
+          <PracticeArea
+            session={session}
+            targetMs={targetMs}
+            onNext={handleNext}
+            onStop={handleStop}
+            mode={effectiveMode}
+            activeVideo={activeVideo}
+          />
         ) : null}
       </div>
 
@@ -242,16 +258,30 @@ export function SessionScreen() {
   );
 }
 
-function SessionHeader({ session, targetMs, onQuit }: { session: Session; targetMs: number | null; onQuit: () => void }) {
+function SessionHeader({
+  session, targetMs, userName, onQuit,
+}: { session: Session; targetMs: number | null; userName: string; onQuit: () => void }) {
   return (
     <header className="flex items-center justify-between">
       <button className="text-white/70 hover:text-white text-sm" onClick={onQuit}>← End</button>
       <div className="text-xs uppercase tracking-widest text-white/50">
-        {session.mode === 'daily' ? `Daily · ${(targetMs ?? 0) / 60_000} min goal` :
+        {userName} · {session.mode === 'daily' ? `Daily · ${(targetMs ?? 0) / 60_000} min goal` :
           session.mode === 'extra' ? 'Extra Time' : 'Manual pick'}
       </div>
       <div className="text-xs text-white/50 tabular">videos: {session.rounds.length}</div>
     </header>
+  );
+}
+
+/** Title + optional description shown below the video during the watching phase. */
+function VideoMeta({ video }: { video: VideoRef }) {
+  return (
+    <div className="max-w-2xl mx-auto mt-3 px-1">
+      <h2 className="text-lg font-bold leading-snug">{video.title}</h2>
+      {video.description && (
+        <p className="text-white/70 text-sm mt-1 leading-relaxed">{video.description}</p>
+      )}
+    </div>
   );
 }
 
@@ -261,12 +291,14 @@ function PracticeArea({
   onNext,
   onStop,
   mode,
+  activeVideo,
 }: {
   session: Session;
   targetMs: number | null;
   onNext: () => void;
   onStop: () => void;
   mode: SessionMode;
+  activeVideo: VideoRef;
 }) {
   const [, force] = useState(0);
   useEffect(() => {
@@ -286,7 +318,7 @@ function PracticeArea({
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: 'spring', stiffness: 220, damping: 24 }}
-      className="flex flex-col items-center gap-6 mt-4"
+      className="flex flex-col items-center gap-4 mt-4"
     >
       {targetMs ? (
         <ProgressRing progress={ringProgress} size={280}>
@@ -298,9 +330,15 @@ function PracticeArea({
         </div>
       )}
 
-      <p className="text-white/70 text-center px-4">
-        Drill it. When you’re ready for the next skill:
-      </p>
+      <div className="text-center px-4">
+        <div className="text-white/50 text-xs uppercase tracking-widest">Now drilling</div>
+        <div className="font-bold text-white">{activeVideo.title}</div>
+        {activeVideo.description && (
+          <p className="text-white/70 text-sm mt-1">{activeVideo.description}</p>
+        )}
+      </div>
+
+      <p className="text-white/60 text-center px-4 text-sm">When you’re ready for the next skill:</p>
 
       <div className="w-full space-y-3">
         <Button variant="primary" size="xl" fullWidth onClick={onNext}>Next video →</Button>

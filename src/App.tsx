@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useContentStore } from '@/store/contentStore';
@@ -21,12 +21,23 @@ export function App() {
 
 function Boot() {
   const status = useContentStore((s) => s.status);
+  const content = useContentStore((s) => s.content);
   const error = useContentStore((s) => s.error);
   const load = useContentStore((s) => s.load);
   const hydrateProgress = useProgressStore((s) => s.hydrate);
+  const reconcile = useProgressStore((s) => s.reconcileWithContent);
+  const reconciled = useRef(false);
 
   useEffect(() => { hydrateProgress(); }, [hydrateProgress]);
   useEffect(() => { void load(); }, [load]);
+
+  // Once content arrives, reconcile the vault with the user list exactly once.
+  useEffect(() => {
+    if (content && !reconciled.current) {
+      reconciled.current = true;
+      reconcile(content.users);
+    }
+  }, [content, reconcile]);
 
   if (status === 'idle' || status === 'loading') {
     return <div className="min-h-dvh grid place-items-center text-white/60">Loading…</div>;

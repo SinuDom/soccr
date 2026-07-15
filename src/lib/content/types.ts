@@ -1,18 +1,26 @@
-import type { Settings, VideoRef } from '@/lib/domain/types';
+import type { Settings, User } from '@/lib/domain/types';
 
 export interface RawContentEntry {
   url: string;
   title?: string;
+  description?: string;
+}
+
+export interface RawContentUser {
+  name: string;
+  videos: RawContentEntry[];
 }
 
 export interface RawContentFile {
   settings: Settings;
-  videos: RawContentEntry[];
+  users?: RawContentUser[];
+  /** Legacy top-level list (single-user); still accepted. */
+  videos?: RawContentEntry[];
 }
 
 export interface Content {
   settings: Settings;
-  videos: VideoRef[];
+  users: User[];
 }
 
 export type ContentError =

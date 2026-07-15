@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useContentStore } from '@/store/contentStore';
+import { useContentStore, getUser } from '@/store/contentStore';
 import { useProgressStore } from '@/store/progressStore';
 import { Button } from '@/components/Button';
 import { Modal } from '@/components/Modal';
@@ -9,11 +9,14 @@ import { exportToBlob, parseImportedText } from '@/lib/storage/portability';
 export function Settings() {
   const content = useContentStore((s) => s.content);
   const refetchContent = useContentStore((s) => s.refetch);
-  const progress = useProgressStore((s) => s.progress);
+  const vault = useProgressStore((s) => s.vault);
+  const activeUserId = useProgressStore((s) => s.activeUserId);
   const corrupted = useProgressStore((s) => s.corrupted);
-  const replace = useProgressStore((s) => s.replace);
-  const merge = useProgressStore((s) => s.merge);
-  const reset = useProgressStore((s) => s.reset);
+  const replaceVault = useProgressStore((s) => s.replaceVault);
+  const mergeVault = useProgressStore((s) => s.mergeVault);
+  const resetActiveUser = useProgressStore((s) => s.resetActiveUser);
+
+  const activeUser = getUser(content, activeUserId);
 
   const [confirmReset, setConfirmReset] = useState(false);
   const [importDialog, setImportDialog] = useState<{ text: string } | null>(null);
@@ -21,7 +24,7 @@ export function Settings() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   function handleExport() {
-    const { blob, filename } = exportToBlob(progress);
+    const { blob, filename } = exportToBlob(vault);
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -49,8 +52,8 @@ export function Settings() {
     if (!importDialog) return;
     const r = parseImportedText(importDialog.text);
     if (!r.ok) { setImportError(r.error); setImportDialog(null); return; }
-    if (kind === 'replace') replace(r.progress);
-    else merge(r.progress, content?.settings.maxFreezesHeld ?? 1);
+    if (kind === 'replace') replaceVault(r.vault);
+    else mergeVault(r.vault, content?.settings.maxFreezesHeld ?? 1);
     setImportDialog(null);
   }
 
@@ -67,6 +70,32 @@ export function Settings() {
         </div>
       )}
 
+      <Section title="Users (from content.json)">
+        {content && content.users.length > 0 ? (
+          <ul className="space-y-2 text-sm">
+            {content.users.map((u) => {
+              const p = vault.users[u.id];
+              return (
+                <li key={u.id} className="flex items-center justify-between gap-2">
+                  <span className={u.id === activeUserId ? 'font-bold text-white' : 'text-white/80'}>
+                    {u.name}{u.id === activeUserId ? ' (active)' : ''}
+                  </span>
+                  <span className="text-white/50 tabular text-xs">
+                    {u.videos.length} videos · streak {p?.currentStreak ?? 0} · {p?.points ?? 0} pts
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="text-white/60 text-sm">No users defined.</p>
+        )}
+        <p className="text-white/50 text-xs mt-3">
+          Add or remove users under <code className="rounded bg-black/40 px-1">users</code> in
+          <code className="mx-1 rounded bg-black/40 px-1">public/content.json</code>. Each user's progress is separate.
+        </p>
+      </Section>
+
       <Section title="Content settings (from content.json)">
         {content ? (
           <dl className="grid grid-cols-2 gap-2 text-sm">
@@ -79,17 +108,14 @@ export function Settings() {
         ) : (
           <p className="text-white/60 text-sm">Content not loaded.</p>
         )}
-        <p className="text-white/50 text-xs mt-3">
-          Edit these by opening <code className="rounded bg-black/40 px-1">public/content.json</code> on GitHub.
-        </p>
         <div className="mt-3">
           <Button variant="ghost" size="md" onClick={() => void refetchContent()}>Re-fetch content.json</Button>
         </div>
       </Section>
 
-      <Section title="Progress backup">
+      <Section title="Backup (all users)">
         <div className="flex flex-col gap-3">
-          <Button variant="secondary" size="lg" onClick={handleExport}>Export progress (.json)</Button>
+          <Button variant="secondary" size="lg" onClick={handleExport}>Export vault (.json)</Button>
           <input
             ref={fileRef}
             type="file"
@@ -97,36 +123,38 @@ export function Settings() {
             className="hidden"
             onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFilePicked(f); e.target.value = ''; }}
           />
-          <Button variant="secondary" size="lg" onClick={() => fileRef.current?.click()}>Import progress…</Button>
+          <Button variant="secondary" size="lg" onClick={() => fileRef.current?.click()}>Import vault…</Button>
           {importError && <div className="text-sm text-red-300">{importError}</div>}
         </div>
         <p className="text-white/50 text-xs mt-3">
-          This is your only cross-device sync. Export on one phone, import on another.
+          One backup covers every user in the vault. Export on one device, import on another.
         </p>
       </Section>
 
       <Section title="Danger zone">
-        <Button variant="danger" size="lg" onClick={() => setConfirmReset(true)}>Reset progress…</Button>
+        <Button variant="danger" size="lg" onClick={() => setConfirmReset(true)}>
+          Reset {activeUser?.name ?? 'active user'}'s progress…
+        </Button>
       </Section>
 
       <Modal
         open={confirmReset}
         onClose={() => setConfirmReset(false)}
-        title="Reset all progress?"
+        title={`Reset ${activeUser?.name ?? 'active user'}'s progress?`}
         footer={
           <>
             <Button variant="ghost" onClick={() => setConfirmReset(false)}>Cancel</Button>
-            <Button variant="danger" onClick={() => { reset(); setConfirmReset(false); }}>Reset everything</Button>
+            <Button variant="danger" onClick={() => { resetActiveUser(); setConfirmReset(false); }}>Reset</Button>
           </>
         }
       >
-        This wipes your streak, points, freezes, and history. Consider exporting first.
+        This wipes the streak, points, freezes, and history for {activeUser?.name ?? 'this user'} only. Other users are untouched.
       </Modal>
 
       <Modal
         open={!!importDialog}
         onClose={() => setImportDialog(null)}
-        title="Import progress"
+        title="Import backup"
         footer={
           <>
             <Button variant="ghost" onClick={() => setImportDialog(null)}>Cancel</Button>
@@ -135,8 +163,8 @@ export function Settings() {
           </>
         }
       >
-        <p><strong>Merge</strong> keeps the higher streak, points, and longest streak from either side and unions your seen-videos.</p>
-        <p className="mt-2"><strong>Replace</strong> overwrites the current progress with the imported file exactly.</p>
+        <p><strong>Merge</strong> keeps, per user, the higher streak / points / longest streak and unions seen-videos + history.</p>
+        <p className="mt-2"><strong>Replace</strong> overwrites the entire vault with the imported file.</p>
       </Modal>
     </div>
   );

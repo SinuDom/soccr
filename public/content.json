@@ -6,18 +6,43 @@
     "maxFreezesHeld": 1,
     "recycleWhenLibraryExhausted": true
   },
-  "videos": [
+  "users": [
     {
-      "url": "https://www.youtube.com/watch?v=8cCISQG1SuA",
-      "title": "video 1"
+      "name": "Leon",
+      "videos": [
+        {
+          "url": "https://www.youtube.com/watch?v=8cCISQG1SuA",
+          "title": "video 1",
+          "description": "Football drill — practice the move you just saw."
+        },
+        {
+          "url": "https://www.youtube.com/watch?v=3eTVbWVqpM8",
+          "title": "video 2"
+        },
+        {
+          "url": "https://www.youtube.com/watch?v=-GVpr43oVQU",
+          "title": "video 3"
+        }
+      ]
     },
     {
-      "url": "https://www.youtube.com/watch?v=3eTVbWVqpM8",
-      "title": "video 2"
-    },
-    {
-      "url": "https://www.youtube.com/watch?v=-GVpr43oVQU",
-      "title": "video 3"
+      "name": "Anya",
+      "videos": [
+        {
+          "url": "https://www.youtube.com/watch?v=v7AYKMP6rOE",
+          "title": "Yoga for beginners",
+          "description": "Full 20-min beginner flow. Follow along and hold each pose."
+        },
+        {
+          "url": "https://www.youtube.com/watch?v=FI_p0x6vxCE",
+          "title": "Morning yoga stretch",
+          "description": "Wake-up sequence — cat-cow, downward dog, sun salutation."
+        },
+        {
+          "url": "https://www.youtube.com/watch?v=4pKly2JojMw",
+          "title": "Yoga for flexibility"
+        }
+      ]
     }
   ]
 }

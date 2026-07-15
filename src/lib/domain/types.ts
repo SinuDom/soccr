@@ -5,7 +5,14 @@ export interface VideoRef {
   id: string;
   url: string;
   title: string;
+  description?: string;
   platform: Platform;
+}
+
+export interface User {
+  id: string;                 // slug derived from name
+  name: string;               // display name
+  videos: VideoRef[];         // this user's library
 }
 
 export interface Settings {
@@ -38,7 +45,27 @@ export interface Progress {
   history: HistoryEntry[];
 }
 
+/** Version of the inner per-user Progress object. */
 export const CURRENT_SCHEMA_VERSION = 1;
+
+/**
+ * Vault: the outer, multi-user object stored in localStorage. Each user gets
+ * their own Progress record — streaks, points, seen-videos, and history are
+ * strictly per-user. Videos are also per-user in content.json.
+ */
+export interface Vault {
+  vaultVersion: number;                // outer schema version (currently 2)
+  activeUserId: string;                // which user's slot is currently shown
+  users: Record<string, Progress>;     // keyed by user id (slug of name)
+}
+
+export const CURRENT_VAULT_VERSION = 2;
+
+export const DEFAULT_VAULT: Vault = {
+  vaultVersion: CURRENT_VAULT_VERSION,
+  activeUserId: '',
+  users: {},
+};
 
 export const DEFAULT_PROGRESS: Progress = {
   schemaVersion: CURRENT_SCHEMA_VERSION,
