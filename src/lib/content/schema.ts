@@ -130,20 +130,10 @@ function parseVideos(list: RawContentEntry[], where: string): VideoRef[] {
       timer = rawTimer;
     }
 
-    const rawRepetition = (entry as any).repetition;
-    let repetition: number | undefined;
-    if (rawRepetition !== undefined) {
-      if (typeof rawRepetition !== 'number' || !Number.isInteger(rawRepetition) || rawRepetition < 1) {
-        throw new Error(`${where}[${i}].repetition must be an integer >= 1.`);
-      }
-      repetition = rawRepetition;
-    }
-
     const v: VideoRef = { id, url, title, platform: detectPlatform(url) };
     if (description) v.description = description;
     if (timerTitles) v.timerTitles = timerTitles;
     if (timer !== undefined) v.timer = timer;
-    if (repetition !== undefined) v.repetition = repetition;
     return v;
   });
 }

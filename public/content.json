@@ -16,23 +16,20 @@
           "title": "Ball 1",
           "description": "Csinald mind a 3 gyakorlatot 2 percig.",
           "timerTitles": ["Jobb", "Ball", "Mindketto"],
-          "timer": 120,
-          "repetition": 3
+          "timer": 120
         },
         {
           "url": "https://www.youtube.com/shorts/_eraYN00_Vg",
           "title": "Speed 1",
           "description": "A palyat bolyakkal csinald. Ismeteld meg 3x kis szunettel",
-          "timer": 120,
-          "repetition": 1
+          "timer": 120
         },
         {
           "url": "https://www.youtube.com/shorts/V4Q4H7CXomM",
           "title": "Ball 2",
           "description": "Mind a 3 gyakorlatot 2 percig.",
           "timerTitles": ["Lab kozott passz", "Huzogatni", "Belulrol kifele"],
-          "timer": 120,
-          "repetition": 3
+          "timer": 120
         }
       ]
     },

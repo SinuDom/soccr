@@ -92,7 +92,7 @@ export function SessionScreen() {
   useEffect(() => {
     if (!session || session.phase !== 'done') return;
     if (session.discarded) {
-      nav('/', { replace: true });
+      nav('/home', { replace: true });
       return;
     }
     finalizeSession(session);
@@ -204,9 +204,11 @@ export function SessionScreen() {
     if (!session || session.phase !== 'practicing') return;
     const v = libraryVideos.find((x) => x.id === session.activeVideoId);
     // Library mode is "just play the video": it never tracks practice time, so
-    // the wall clock stays off entirely. Otherwise it only drives the session
-    // for videos that have no drill timer to report their own contribution.
-    if (!v || v.timer || libraryMode) return;
+    // the wall clock stays off entirely. Daily practice time must be counted
+    // from the drill timers ONLY (targetMs != null means daily), so the wall
+    // clock never drives the daily session goal. Otherwise it only drives
+    // non-daily sessions for videos that have no drill timer of their own.
+    if (!v || v.timer || libraryMode || targetMs != null) return;
     const start = Date.now();
     let raf = 0;
     const loop = () => {
@@ -234,7 +236,7 @@ export function SessionScreen() {
       <div className="min-h-dvh grid place-items-center p-6 text-center">
         <div>
           <p className="mb-4">No user selected. Head home and pick one.</p>
-          <Button onClick={() => nav('/', { replace: true })}>Home</Button>
+          <Button onClick={() => nav('/home', { replace: true })}>Home</Button>
         </div>
       </div>
     );
@@ -249,7 +251,7 @@ export function SessionScreen() {
       <div className="min-h-dvh grid place-items-center p-6 text-center">
         <div>
           <p className="mb-4">That video isn’t in {activeUser.name}’s library anymore.</p>
-          <Button onClick={() => nav('/', { replace: true })}>Home</Button>
+          <Button onClick={() => nav('/home', { replace: true })}>Home</Button>
         </div>
       </div>
     );
@@ -500,7 +502,6 @@ function PracticeArea({
         {!libraryMode && (
           <DrillTimers
             seconds={activeVideo.timer}
-            repetition={activeVideo.repetition}
             titles={activeVideo.timerTitles}
             onElapsedChange={onDrillElapsedChange}
             onAllDoneChange={onDrillAllDoneChange}

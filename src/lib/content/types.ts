@@ -4,12 +4,13 @@ export interface RawContentEntry {
   url: string;
   title?: string;
   description?: string;
-  /** Individual titles for each drill timer/set. The nth string labels the nth timer. */
+  /**
+   * Individual titles for each drill timer/set. The nth string labels the nth
+   * timer, and the array length determines how many drill timers are shown.
+   */
   timerTitles?: string[];
   /** How long to perform one drill, in seconds. */
   timer?: number;
-  /** How many identical drill timers to run, shown next to each other. */
-  repetition?: number;
 }
 
 export interface RawContentUser {

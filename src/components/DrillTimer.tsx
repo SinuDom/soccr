@@ -227,8 +227,10 @@ function ControlButton({
 }
 
 /**
- * Renders one DrillTimer per repetition, laid out next to each other. Returns
- * null when the active drill has no timer configured.
+ * Renders one DrillTimer per timer title, laid out next to each other. The
+ * number of timers is driven by the length of `titles` (falling back to a
+ * single timer when no titles are provided). Returns null when the active
+ * drill has no timer configured.
  *
  * It aggregates the child timers and reports:
  *  - `onElapsedChange`: the summed drill time contributed by all timers (so
@@ -238,18 +240,16 @@ function ControlButton({
  */
 export function DrillTimers({
   seconds,
-  repetition,
   titles,
   onElapsedChange,
   onAllDoneChange,
 }: {
   seconds?: number;
-  repetition?: number;
   titles?: string[];
   onElapsedChange?: (elapsedMs: number) => void;
   onAllDoneChange?: (allDone: boolean) => void;
 }) {
-  const count = seconds && seconds >= 1 ? Math.max(1, Math.floor(repetition ?? 1)) : 0;
+  const count = seconds && seconds >= 1 ? Math.max(1, titles?.length ?? 1) : 0;
 
   const elapsedRef = useRef<number[]>([]);
   const doneRef = useRef<boolean[]>([]);
