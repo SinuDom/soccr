@@ -24,6 +24,18 @@ If you don't have the tools installed, manually verify that:
 3. The structure of `settings` and `users` (including `videos`) is preserved.
 4. No additional properties are added if the schema forbids them.
 
+## Versioning
+
+Whenever you make **any** change to the code, you **must** bump the `version` field in `package.json`. This version is shown in the UI (bottom-left corner), so it must always reflect the current state of the code.
+
+Follow [Semantic Versioning](https://semver.org/) (`MAJOR.MINOR.PATCH`) when choosing the new number:
+
+1. **MAJOR** (`x.0.0`) — increment for incompatible or breaking changes (e.g., removing/renaming a feature, changing the content schema in a non-backward-compatible way).
+2. **MINOR** (`0.x.0`) — increment for new, backward-compatible functionality (e.g., adding a new feature or option). Reset PATCH to `0`.
+3. **PATCH** (`0.0.x`) — increment for backward-compatible bug fixes, small tweaks, refactors, or documentation-only changes.
+
+Always bump exactly one number and reset the lower-order numbers to `0` (e.g., `1.2.3` → `1.3.0` for a minor bump).
+
 ## General Rules
 
 - Maintain consistent indentation (2 spaces).
