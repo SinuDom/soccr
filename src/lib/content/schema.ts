@@ -111,6 +111,16 @@ function parseVideos(list: RawContentEntry[], where: string): VideoRef[] {
       ? rawDescription.trim()
       : undefined;
 
+    const rawTimerTitles = (entry as any).timerTitles;
+    let timerTitles: string[] | undefined;
+    if (rawTimerTitles !== undefined) {
+      if (!Array.isArray(rawTimerTitles) || rawTimerTitles.some((t) => typeof t !== 'string')) {
+        throw new Error(`${where}[${i}].timerTitles must be an array of strings.`);
+      }
+      const cleaned = rawTimerTitles.map((t) => (t as string).trim());
+      if (cleaned.length > 0) timerTitles = cleaned;
+    }
+
     const rawTimer = (entry as any).timer;
     let timer: number | undefined;
     if (rawTimer !== undefined) {
@@ -131,6 +141,7 @@ function parseVideos(list: RawContentEntry[], where: string): VideoRef[] {
 
     const v: VideoRef = { id, url, title, platform: detectPlatform(url) };
     if (description) v.description = description;
+    if (timerTitles) v.timerTitles = timerTitles;
     if (timer !== undefined) v.timer = timer;
     if (repetition !== undefined) v.repetition = repetition;
     return v;

@@ -9,6 +9,7 @@ import {
   endEarly,
   onVideoEnded,
   pressNext,
+  setDrillRunning,
   startSession,
   stopExtra,
   tickDaily,
@@ -17,7 +18,7 @@ import {
   type Session,
 } from '@/lib/domain/session';
 import { toLocalDateString } from '@/lib/domain/streak';
-import { elapsedNow } from '@/lib/domain/practiceClock';
+import { elapsedNow, startClock, stopClock } from '@/lib/domain/practiceClock';
 import { PracticeClock } from '@/components/PracticeClock';
 import { ProgressRing } from '@/components/ProgressRing';
 import { DrillTimers } from '@/components/DrillTimer';
@@ -134,6 +135,21 @@ export function SessionScreen() {
     setSession((s) => (s ? onVideoEnded(s, Date.now()) : s));
   }, []);
 
+  // The session clock is driven by the per-drill timers: it only runs while at
+  // least one drill timer is counting down.
+  const handleDrillRunningChange = useCallback((running: boolean) => {
+    setSession((s) => (s ? setDrillRunning(s, running, Date.now()) : s));
+  }, []);
+
+  // Let the user re-watch the current video mid-drill. Bank whatever time the
+  // clock has accrued, then drop back to the watching phase.
+  const handleWatchAgain = useCallback(() => {
+    setSession((s) => {
+      if (!s || s.phase !== 'practicing') return s;
+      return { ...s, phase: 'watching', clock: stopClock(s.clock, Date.now()) };
+    });
+  }, []);
+
   const handleLoadError = useCallback(() => { setLoadFailed(true); }, []);
 
   const handleSkip = useCallback(() => {
@@ -163,6 +179,21 @@ export function SessionScreen() {
     if (!r.videoId) return;
     setSession((s) => (s ? pressNext(s, r.videoId!, Date.now()).session : s));
   }, [content, session, libraryVideos, progress.seenVideoIds, progress.cycleNumber, advanceCycle, markSeenAction]);
+
+  // Videos without a configured drill timer have nothing to drive the clock, so
+  // fall back to auto-running it once the video finishes (previous behaviour).
+  useEffect(() => {
+    if (!session || session.phase !== 'practicing') return;
+    const v = libraryVideos.find((x) => x.id === session.activeVideoId);
+    if (v && !v.timer) {
+      setSession((s) =>
+        s && s.phase === 'practicing' && s.clock.status !== 'running'
+          ? { ...s, clock: startClock(s.clock, Date.now()) }
+          : s,
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.phase, session?.activeVideoId]);
 
   const handleStop = useCallback(() => {
     if (!session) return;
@@ -234,6 +265,8 @@ export function SessionScreen() {
             targetMs={targetMs}
             onNext={handleNext}
             onStop={handleStop}
+            onWatchAgain={handleWatchAgain}
+            onDrillRunningChange={handleDrillRunningChange}
             mode={effectiveMode}
             activeVideo={activeVideo}
           />
@@ -291,6 +324,8 @@ function PracticeArea({
   targetMs,
   onNext,
   onStop,
+  onWatchAgain,
+  onDrillRunningChange,
   mode,
   activeVideo,
 }: {
@@ -298,6 +333,8 @@ function PracticeArea({
   targetMs: number | null;
   onNext: () => void;
   onStop: () => void;
+  onWatchAgain: () => void;
+  onDrillRunningChange: (running: boolean) => void;
   mode: SessionMode;
   activeVideo: VideoRef;
 }) {
@@ -347,11 +384,17 @@ function PracticeArea({
       </div>
 
       {/* Primary focus: the per-drill countdown timer(s). */}
-      <DrillTimers seconds={activeVideo.timer} repetition={activeVideo.repetition} />
+      <DrillTimers
+        seconds={activeVideo.timer}
+        repetition={activeVideo.repetition}
+        titles={activeVideo.timerTitles}
+        onRunningChange={onDrillRunningChange}
+      />
 
       <p className="text-white/60 text-center px-4 text-sm">When you’re ready for the next skill:</p>
 
       <div className="w-full space-y-3">
+        <Button variant="secondary" size="lg" fullWidth onClick={onWatchAgain}>↺ Watch video again</Button>
         <Button variant="primary" size="xl" fullWidth onClick={onNext}>Next video →</Button>
         {mode !== 'daily' && (
           <Button variant="ice" size="lg" fullWidth onClick={onStop}>Stop — bank {formatMin(total)}</Button>

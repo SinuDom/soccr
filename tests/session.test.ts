@@ -3,6 +3,7 @@ import {
   endEarly,
   onVideoEnded,
   pressNext,
+  setDrillRunning,
   startSession,
   stopExtra,
   tickDaily,
@@ -18,12 +19,15 @@ describe('session engine — practice-time accumulation', () => {
     expect(totalPracticeMs(s, now + 30_000)).toBe(0);
   });
 
-  it('practice time accrues only after onVideoEnded', () => {
+  it('practice time accrues only while a drill timer is running', () => {
     const now = 1_000_000;
     let s = startSession({ mode: 'daily', firstVideoId: 'v1', targetMs: 60_000, now });
-    // Simulate 20s of watching.
+    // Simulate 20s of watching, then enter the practicing phase.
     s = onVideoEnded(s, now + 20_000);
-    // 10s of practicing.
+    // The clock does NOT auto-start — no drill running yet.
+    expect(totalPracticeMs(s, now + 30_000)).toBe(0);
+    // Start a drill timer at the 20s mark; time now accrues.
+    s = setDrillRunning(s, true, now + 20_000);
     expect(totalPracticeMs(s, now + 30_000)).toBe(10_000);
     expect(totalPracticeMs(s, now + 45_000)).toBe(25_000);
   });
@@ -32,6 +36,7 @@ describe('session engine — practice-time accumulation', () => {
     const now = 1_000_000;
     let s = startSession({ mode: 'extra', firstVideoId: 'v1', targetMs: null, now });
     s = onVideoEnded(s, now + 5_000);          // 5s of watching
+    s = setDrillRunning(s, true, now + 5_000); // start the drill timer
     const { session: s2, roundMs } = pressNext(s, 'v2', now + 15_000); // +10s practice
     expect(roundMs).toBe(10_000);
     expect(s2.phase).toBe('watching');
@@ -47,6 +52,7 @@ describe('session engine — daily auto-end', () => {
     const now = 1_000_000;
     let s = startSession({ mode: 'daily', firstVideoId: 'v1', targetMs: 60_000, now });
     s = onVideoEnded(s, now + 5_000);
+    s = setDrillRunning(s, true, now + 5_000);
     // Just below the target.
     s = tickDaily(s, now + 5_000 + 59_999);
     expect(s.phase).toBe('practicing');
@@ -64,6 +70,7 @@ describe('session engine — daily auto-end', () => {
     const now = 1_000_000;
     let s = startSession({ mode: 'extra', firstVideoId: 'v1', targetMs: null, now });
     s = onVideoEnded(s, now + 1_000);
+    s = setDrillRunning(s, true, now + 1_000);
     const s2 = tickDaily(s, now + 999_999);
     expect(s2).toBe(s);
   });
@@ -82,6 +89,7 @@ describe('session engine — end / stop paths', () => {
     const now = 1_000_000;
     let s = startSession({ mode: 'extra', firstVideoId: 'v1', targetMs: null, now });
     s = onVideoEnded(s, now + 2_000);
+    s = setDrillRunning(s, true, now + 2_000);
     const s2 = stopExtra(s, now + 12_000);
     expect(s2.phase).toBe('done');
     expect(s2.rounds).toEqual([{ videoId: 'v1', practiceMs: 10_000 }]);

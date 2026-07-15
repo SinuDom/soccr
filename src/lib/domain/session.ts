@@ -39,13 +39,26 @@ export function startSession(params: {
   };
 }
 
-export function onVideoEnded(session: Session, now: number): Session {
+export function onVideoEnded(session: Session, _now: number): Session {
   if (session.phase !== 'watching') return session;
+  // The practice clock no longer starts automatically here. It is driven by
+  // the per-drill timers (see setDrillRunning) so the session time reflects
+  // actual drill work. The clock keeps whatever it had banked so far.
   return {
     ...session,
     phase: 'practicing',
-    clock: startClock(session.clock, now),
   };
+}
+
+/**
+ * Start or stop the session practice clock based on whether any drill timer is
+ * currently counting down. This replaces the previous auto-start behaviour so
+ * the session time is accumulated from the drill timers.
+ */
+export function setDrillRunning(session: Session, running: boolean, now: number): Session {
+  if (session.phase !== 'practicing') return session;
+  const clock = running ? startClock(session.clock, now) : stopClock(session.clock, now);
+  return { ...session, clock };
 }
 
 /**

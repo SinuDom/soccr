@@ -2,22 +2,26 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ProgressRing } from './ProgressRing';
 import { formatClock } from './PracticeClock';
 
-type Phase = 'idle' | 'running' | 'done';
+type Phase = 'idle' | 'running' | 'paused' | 'done';
 
 interface Props {
   /** Duration of the drill, in seconds. */
   seconds: number;
   /** 1-based label index when several timers are shown next to each other. */
   index?: number;
+  /** Custom label for this individual timer; overrides the default "Set N"/"Drill". */
+  label?: string;
+  /** Fired whenever this timer starts/stops counting down. */
+  onRunningChange?: (running: boolean) => void;
 }
 
 /**
  * A single drill countdown. Starts on demand via its own Start button, shows
  * the remaining time as big numbers, and a ring that visually indicates how
- * much time is left. When it reaches zero it flips to a "done" state and can be
- * run again.
+ * much time is left. It can be paused/resumed while running and, when it
+ * reaches zero, flips to a "done" state and can be run again.
  */
-export function DrillTimer({ seconds, index }: Props) {
+export function DrillTimer({ seconds, index, label: customLabel, onRunningChange }: Props) {
   const totalMs = Math.max(1, Math.round(seconds * 1000));
   const [phase, setPhase] = useState<Phase>('idle');
   const [remainingMs, setRemainingMs] = useState(totalMs);
@@ -28,6 +32,11 @@ export function DrillTimer({ seconds, index }: Props) {
     setPhase('idle');
     setRemainingMs(totalMs);
   }, [totalMs]);
+
+  // Let the parent know whether this timer is actively counting down.
+  useEffect(() => {
+    onRunningChange?.(phase === 'running');
+  }, [phase, onRunningChange]);
 
   useEffect(() => {
     if (phase !== 'running') return;
@@ -52,13 +61,25 @@ export function DrillTimer({ seconds, index }: Props) {
     setPhase('running');
   }, [totalMs]);
 
+  const pause = useCallback(() => {
+    // Freeze the remaining time; the running loop reads endAtRef so capture it.
+    const left = Math.max(0, endAtRef.current - Date.now());
+    setRemainingMs(left);
+    setPhase('paused');
+  }, []);
+
+  const resume = useCallback(() => {
+    endAtRef.current = Date.now() + remainingMs;
+    setPhase('running');
+  }, [remainingMs]);
+
   const reset = useCallback(() => {
     setPhase('idle');
     setRemainingMs(totalMs);
   }, [totalMs]);
 
   const progress = 1 - remainingMs / totalMs;
-  const label = index != null ? `Set ${index}` : 'Drill';
+  const label = customLabel ?? (index != null ? `Set ${index}` : 'Drill');
 
   return (
     <div className="flex flex-col items-center gap-2">
@@ -89,10 +110,26 @@ export function DrillTimer({ seconds, index }: Props) {
       {phase === 'running' && (
         <button
           className="rounded-xl bg-ink-700 hover:bg-ink-600 text-white border border-ink-600 font-semibold h-10 px-5"
-          onClick={reset}
+          onClick={pause}
         >
-          Reset
+          Pause
         </button>
+      )}
+      {phase === 'paused' && (
+        <div className="flex gap-2">
+          <button
+            className="rounded-xl bg-pitch-500 hover:bg-pitch-400 active:bg-pitch-600 text-ink-950 font-semibold h-10 px-5"
+            onClick={resume}
+          >
+            Resume
+          </button>
+          <button
+            className="rounded-xl bg-ink-700 hover:bg-ink-600 text-white border border-ink-600 font-semibold h-10 px-4"
+            onClick={reset}
+          >
+            Reset
+          </button>
+        </div>
       )}
       {phase === 'done' && (
         <button
@@ -108,20 +145,46 @@ export function DrillTimer({ seconds, index }: Props) {
 
 /**
  * Renders one DrillTimer per repetition, laid out next to each other. Returns
- * null when the active drill has no timer configured.
+ * null when the active drill has no timer configured. Reports whether any of
+ * the child timers is currently counting down via `onRunningChange`.
  */
-export function DrillTimers({ seconds, repetition }: { seconds?: number; repetition?: number }) {
+export function DrillTimers({
+  seconds,
+  repetition,
+  titles,
+  onRunningChange,
+}: {
+  seconds?: number;
+  repetition?: number;
+  titles?: string[];
+  onRunningChange?: (running: boolean) => void;
+}) {
+  const runningCountRef = useRef(0);
+
+  const handleChildRunning = useCallback(
+    (running: boolean) => {
+      runningCountRef.current = Math.max(0, runningCountRef.current + (running ? 1 : -1));
+      onRunningChange?.(runningCountRef.current > 0);
+    },
+    [onRunningChange],
+  );
+
   if (!seconds || seconds < 1) return null;
   const count = Math.max(1, Math.floor(repetition ?? 1));
+  const heading = count > 1 ? `${count} × ${formatClock(seconds * 1000)} drill` : 'Drill timer';
 
   return (
     <div className="w-full flex flex-col items-center gap-3">
-      <div className="text-white/60 text-sm uppercase tracking-widest">
-        {count > 1 ? `${count} × ${formatClock(seconds * 1000)} drill` : 'Drill timer'}
-      </div>
+      <div className="text-white/60 text-sm uppercase tracking-widest">{heading}</div>
       <div className="flex flex-wrap items-start justify-center gap-4">
         {Array.from({ length: count }, (_, i) => (
-          <DrillTimer key={i} seconds={seconds} index={count > 1 ? i + 1 : undefined} />
+          <DrillTimer
+            key={i}
+            seconds={seconds}
+            index={count > 1 ? i + 1 : undefined}
+            label={titles?.[i]}
+            onRunningChange={handleChildRunning}
+          />
         ))}
       </div>
     </div>

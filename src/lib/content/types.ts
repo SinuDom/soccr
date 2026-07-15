@@ -4,6 +4,8 @@ export interface RawContentEntry {
   url: string;
   title?: string;
   description?: string;
+  /** Individual titles for each drill timer/set. The nth string labels the nth timer. */
+  timerTitles?: string[];
   /** How long to perform one drill, in seconds. */
   timer?: number;
   /** How many identical drill timers to run, shown next to each other. */

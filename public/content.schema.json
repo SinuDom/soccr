@@ -39,6 +39,11 @@
                 "url": { "type": "string", "format": "uri" },
                 "title": { "type": "string" },
                 "description": { "type": "string" },
+                "timerTitles": {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "description": "Individual titles for each drill timer/set. The nth string labels the nth timer."
+                },
                 "timer": {
                   "type": "integer",
                   "minimum": 1,
