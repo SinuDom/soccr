@@ -36,6 +36,21 @@ Follow [Semantic Versioning](https://semver.org/) (`MAJOR.MINOR.PATCH`) when cho
 
 Always bump exactly one number and reset the lower-order numbers to `0` (e.g., `1.2.3` → `1.3.0` for a minor bump).
 
+### How to bump the version
+
+**Always** use the `npm version` command instead of hand-editing `package.json`. This bumps the `version` field in **both** `package.json` and `package-lock.json` in one step, keeping them in sync and avoiding drift:
+
+```bash
+# Choose exactly one of the following, matching the SemVer guidance above:
+npm version patch --no-git-tag-version   # bug fixes, small tweaks, docs
+npm version minor --no-git-tag-version   # new, backward-compatible features
+npm version major --no-git-tag-version   # breaking changes
+```
+
+The `--no-git-tag-version` flag updates the files without creating a git commit or tag, so you stay in control of committing.
+
+If you ever edit `package.json` by hand, you **must** afterwards run `npm install --package-lock-only` (or `npm install`) so that `package-lock.json` is realigned to the same version. `package.json` and `package-lock.json` must never disagree on the `version`.
+
 ## General Rules
 
 - Maintain consistent indentation (2 spaces).
