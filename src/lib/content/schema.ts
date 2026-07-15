@@ -110,8 +110,29 @@ function parseVideos(list: RawContentEntry[], where: string): VideoRef[] {
     const description = typeof rawDescription === 'string' && rawDescription.trim().length > 0
       ? rawDescription.trim()
       : undefined;
+
+    const rawTimer = (entry as any).timer;
+    let timer: number | undefined;
+    if (rawTimer !== undefined) {
+      if (typeof rawTimer !== 'number' || !Number.isInteger(rawTimer) || rawTimer < 1) {
+        throw new Error(`${where}[${i}].timer must be a positive integer number of seconds.`);
+      }
+      timer = rawTimer;
+    }
+
+    const rawRepetition = (entry as any).repetition;
+    let repetition: number | undefined;
+    if (rawRepetition !== undefined) {
+      if (typeof rawRepetition !== 'number' || !Number.isInteger(rawRepetition) || rawRepetition < 1) {
+        throw new Error(`${where}[${i}].repetition must be an integer >= 1.`);
+      }
+      repetition = rawRepetition;
+    }
+
     const v: VideoRef = { id, url, title, platform: detectPlatform(url) };
     if (description) v.description = description;
+    if (timer !== undefined) v.timer = timer;
+    if (repetition !== undefined) v.repetition = repetition;
     return v;
   });
 }

@@ -38,7 +38,17 @@
               "properties": {
                 "url": { "type": "string", "format": "uri" },
                 "title": { "type": "string" },
-                "description": { "type": "string" }
+                "description": { "type": "string" },
+                "timer": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "How long to perform one drill, in seconds."
+                },
+                "repetition": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "How many identical drill timers to run, shown next to each other."
+                }
               },
               "additionalProperties": false
             }

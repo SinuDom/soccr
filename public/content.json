@@ -14,17 +14,23 @@
         {
           "url": "https://www.youtube.com/shorts/--llBGWd4JA",
           "title": "Ball 1",
-          "description": "Csinald mind a 3 gyakorlatot 2 percig."
+          "description": "Csinald mind a 3 gyakorlatot 2 percig.",
+          "timer": 120,
+          "repetition": 3
         },
         {
           "url": "https://www.youtube.com/shorts/_eraYN00_Vg",
           "title": "Speed 1",
-          "description": "A palyat bolyakkal csinald."
+          "description": "A palyat bolyakkal csinald.",
+          "timer": 120,
+          "repetition": 3
         },
         {
           "url": "https://www.youtube.com/shorts/V4Q4H7CXomM",
           "title": "Ball 2",
-          "description": "Mind a 3 gyakorlatot 2 percig."
+          "description": "Mind a 3 gyakorlatot 2 percig.",
+          "timer": 120,
+          "repetition": 3
         }
       ]
     },

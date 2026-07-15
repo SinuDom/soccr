@@ -7,6 +7,10 @@ export interface VideoRef {
   title: string;
   description?: string;
   platform: Platform;
+  /** How long to perform one drill, in seconds. */
+  timer?: number;
+  /** How many identical drill timers to run, shown next to each other. */
+  repetition?: number;
 }
 
 export interface User {

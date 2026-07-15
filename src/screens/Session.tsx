@@ -20,6 +20,7 @@ import { toLocalDateString } from '@/lib/domain/streak';
 import { elapsedNow } from '@/lib/domain/practiceClock';
 import { PracticeClock } from '@/components/PracticeClock';
 import { ProgressRing } from '@/components/ProgressRing';
+import { DrillTimers } from '@/components/DrillTimer';
 import { Button } from '@/components/Button';
 import { Modal } from '@/components/Modal';
 import { VideoPlayer } from '@/components/VideoPlayer';
@@ -318,25 +319,35 @@ function PracticeArea({
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: 'spring', stiffness: 220, damping: 24 }}
-      className="flex flex-col items-center gap-4 mt-4"
+      className="flex flex-col items-center gap-5 mt-4"
     >
+      {/* Secondary, glanceable session indicator — shows how much of the
+          overall session goal is left, with no numbers to focus on. */}
       {targetMs ? (
-        <ProgressRing progress={ringProgress} size={280}>
-          <PracticeClock elapsedMs={total} targetMs={targetMs} running />
-        </ProgressRing>
+        <div className="flex flex-col items-center gap-1">
+          <ProgressRing progress={ringProgress} size={56} stroke={6} color="#8b93a1" trackColor="#2a3444" />
+          <div className="text-white/40 text-[10px] uppercase tracking-widest">session</div>
+        </div>
       ) : (
-        <div className="my-6">
-          <PracticeClock elapsedMs={roundElapsed + (session.rounds.reduce((a, r) => a + r.practiceMs, 0))} running />
+        <div className="opacity-70 scale-75">
+          <PracticeClock
+            elapsedMs={roundElapsed + session.rounds.reduce((a, r) => a + r.practiceMs, 0)}
+            running
+            compact
+          />
         </div>
       )}
 
       <div className="text-center px-4">
         <div className="text-white/50 text-xs uppercase tracking-widest">Now drilling</div>
-        <div className="font-bold text-white">{activeVideo.title}</div>
+        <div className="font-bold text-white text-lg">{activeVideo.title}</div>
         {activeVideo.description && (
           <p className="text-white/70 text-sm mt-1">{activeVideo.description}</p>
         )}
       </div>
+
+      {/* Primary focus: the per-drill countdown timer(s). */}
+      <DrillTimers seconds={activeVideo.timer} repetition={activeVideo.repetition} />
 
       <p className="text-white/60 text-center px-4 text-sm">When you’re ready for the next skill:</p>
 
