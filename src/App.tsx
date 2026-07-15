@@ -15,7 +15,19 @@ export function App() {
   return (
     <BrowserRouter>
       <Boot />
+      <VersionBadge />
     </BrowserRouter>
+  );
+}
+
+function VersionBadge() {
+  return (
+    <span
+      className="fixed bottom-2 left-2 z-50 select-none text-[10px] leading-none text-white/30 pointer-events-none"
+      aria-label={`App version ${__APP_VERSION__}`}
+    >
+      v{__APP_VERSION__}
+    </span>
   );
 }
 
