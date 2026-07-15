@@ -1,7 +1,7 @@
 import type { SessionMode } from './types';
 import { elapsedNow, newClock, startClock, stopClock, type PracticeClock } from './practiceClock';
 
-export type SessionPhase = 'watching' | 'practicing' | 'done';
+export type SessionPhase = 'practicing' | 'done';
 
 export interface RoundRecord {
   videoId: string;
@@ -30,7 +30,7 @@ export function startSession(params: {
     mode: params.mode,
     targetMs: params.targetMs,
     activeVideoId: params.firstVideoId,
-    phase: 'watching',
+    phase: 'practicing',
     rounds: [],
     clock: newClock(),
     discarded: false,
@@ -39,16 +39,6 @@ export function startSession(params: {
   };
 }
 
-export function onVideoEnded(session: Session, _now: number): Session {
-  if (session.phase !== 'watching') return session;
-  // The practice clock no longer starts automatically here. It is driven by
-  // the per-drill timers (see setDrillRunning) so the session time reflects
-  // actual drill work. The clock keeps whatever it had banked so far.
-  return {
-    ...session,
-    phase: 'practicing',
-  };
-}
 
 /**
  * Start or stop the session practice clock based on whether any drill timer is
@@ -80,7 +70,7 @@ export function pressNext(
       ...session,
       rounds,
       activeVideoId: nextVideoId,
-      phase: 'watching',
+      phase: 'practicing',
       clock: newClock(),
     },
     roundMs: banked,
@@ -145,8 +135,8 @@ export function videoIdsWatched(session: Session): string[] {
   for (const r of session.rounds) {
     if (!seen.has(r.videoId)) { seen.add(r.videoId); out.push(r.videoId); }
   }
-  // The active video was watched too (unless discarded/done before video-end).
-  if (!seen.has(session.activeVideoId) && session.phase !== 'watching') {
+  // The active video is drilled too, so count it once it's the active one.
+  if (!seen.has(session.activeVideoId)) {
     out.push(session.activeVideoId);
   }
   return out;

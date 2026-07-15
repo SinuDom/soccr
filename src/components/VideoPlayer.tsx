@@ -6,18 +6,20 @@ import { Button } from './Button';
 interface Props {
   video: VideoRef;
   /** Fired when playback ends (YouTube: auto; others: user presses "Done watching"). */
-  onEnded: () => void;
+  onEnded?: () => void;
   /** Fired when the embed clearly cannot load — parent shows a Skip UI. */
   onLoadError: () => void;
+  /** When true, the clip loops continuously (used while drilling). */
+  loop?: boolean;
 }
 
 /** Dispatch by platform. All embeds are official; we never scrape or re-host. */
-export function VideoPlayer({ video, onEnded, onLoadError }: Props) {
+export function VideoPlayer({ video, onEnded, onLoadError, loop }: Props) {
   switch (video.platform) {
-    case 'youtube':  return <YouTubePlayer video={video} onEnded={onEnded} onLoadError={onLoadError} />;
-    case 'instagram': return <IframeEmbedPlayer video={video} src={instagramEmbedUrl(video.url)} onEnded={onEnded} onLoadError={onLoadError} />;
-    case 'tiktok':    return <IframeEmbedPlayer video={video} src={tiktokEmbedUrl(video.url)} onEnded={onEnded} onLoadError={onLoadError} />;
-    default:          return <IframeEmbedPlayer video={video} src={video.url} onEnded={onEnded} onLoadError={onLoadError} />;
+    case 'youtube':  return <YouTubePlayer video={video} onEnded={onEnded} onLoadError={onLoadError} loop={loop} />;
+    case 'instagram': return <IframeEmbedPlayer video={video} src={instagramEmbedUrl(video.url)} onEnded={onEnded} onLoadError={onLoadError} loop={loop} />;
+    case 'tiktok':    return <IframeEmbedPlayer video={video} src={tiktokEmbedUrl(video.url)} onEnded={onEnded} onLoadError={onLoadError} loop={loop} />;
+    default:          return <IframeEmbedPlayer video={video} src={video.url} onEnded={onEnded} onLoadError={onLoadError} loop={loop} />;
   }
 }
 
@@ -50,7 +52,7 @@ function loadYouTubeApi(): Promise<void> {
   return ytApiPromise;
 }
 
-function YouTubePlayer({ video, onEnded, onLoadError }: Props) {
+function YouTubePlayer({ video, onEnded, onLoadError, loop }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<any>(null);
   const videoId = useMemo(() => extractYouTubeId(video.url), [video.url]);
@@ -62,13 +64,15 @@ function YouTubePlayer({ video, onEnded, onLoadError }: Props) {
 
     loadYouTubeApi().then(() => {
       if (cancelled || !containerRef.current || !window.YT) return;
+      // `loop: 1` requires `playlist` to be the same id for a single video.
+      const loopVars = loop ? { loop: 1, playlist: videoId, autoplay: 1 } : {};
       playerRef.current = new window.YT.Player(containerRef.current, {
         videoId,
-        playerVars: { playsinline: 1, rel: 0, modestbranding: 1, controls: 1 },
+        playerVars: { playsinline: 1, rel: 0, modestbranding: 1, controls: 1, ...loopVars },
         events: {
           onReady: () => { clearTimeout(watchdog); },
           onStateChange: (e: any) => {
-            if (window.YT && e.data === window.YT.PlayerState.ENDED) onEnded();
+            if (window.YT && e.data === window.YT.PlayerState.ENDED) onEnded?.();
           },
           onError: () => onLoadError(),
         },
@@ -97,7 +101,7 @@ function YouTubePlayer({ video, onEnded, onLoadError }: Props) {
 
 // ---------- Instagram / TikTok / other (iframe + "Done watching") ----------
 
-function IframeEmbedPlayer({ video, src, onEnded, onLoadError }: Props & { src: string | null }) {
+function IframeEmbedPlayer({ video, src, onEnded, onLoadError, loop }: Props & { src: string | null }) {
   const [loaded, setLoaded] = useState(false);
   const [errored, setErrored] = useState(false);
 
@@ -134,12 +138,16 @@ function IframeEmbedPlayer({ video, src, onEnded, onLoadError }: Props & { src: 
           <div className="w-full h-full grid place-items-center text-white/70">Couldn’t load embed.</div>
         )}
       </div>
-      <p className="text-sm text-white/60 text-center px-4">
-        This platform doesn’t report when a clip finishes. Watch it, then tap:
-      </p>
-      <Button variant="ice" size="lg" fullWidth onClick={onEnded}>
-        Done watching → start practice
-      </Button>
+      {!loop && onEnded && (
+        <>
+          <p className="text-sm text-white/60 text-center px-4">
+            This platform doesn’t report when a clip finishes. Watch it, then tap:
+          </p>
+          <Button variant="ice" size="lg" fullWidth onClick={onEnded}>
+            Done watching → start practice
+          </Button>
+        </>
+      )}
     </div>
   );
 }

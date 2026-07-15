@@ -7,7 +7,6 @@ import type { VideoRef, SessionMode, HistoryEntry } from '@/lib/domain/types';
 import { markSeen as markSeenPure, pickNextVideo } from '@/lib/domain/selection';
 import {
   endEarly,
-  onVideoEnded,
   pressNext,
   setDrillRunning,
   startSession,
@@ -18,7 +17,7 @@ import {
   type Session,
 } from '@/lib/domain/session';
 import { toLocalDateString } from '@/lib/domain/streak';
-import { elapsedNow, startClock, stopClock } from '@/lib/domain/practiceClock';
+import { elapsedNow, startClock } from '@/lib/domain/practiceClock';
 import { PracticeClock } from '@/components/PracticeClock';
 import { ProgressRing } from '@/components/ProgressRing';
 import { DrillTimers } from '@/components/DrillTimer';
@@ -131,23 +130,10 @@ export function SessionScreen() {
     }
   }, [content, creditDaily, bankExtraTime, markSeenAction, nav]);
 
-  const handleVideoEnded = useCallback(() => {
-    setSession((s) => (s ? onVideoEnded(s, Date.now()) : s));
-  }, []);
-
   // The session clock is driven by the per-drill timers: it only runs while at
   // least one drill timer is counting down.
   const handleDrillRunningChange = useCallback((running: boolean) => {
     setSession((s) => (s ? setDrillRunning(s, running, Date.now()) : s));
-  }, []);
-
-  // Let the user re-watch the current video mid-drill. Bank whatever time the
-  // clock has accrued, then drop back to the watching phase.
-  const handleWatchAgain = useCallback(() => {
-    setSession((s) => {
-      if (!s || s.phase !== 'practicing') return s;
-      return { ...s, phase: 'watching', clock: stopClock(s.clock, Date.now()) };
-    });
   }, []);
 
   const handleLoadError = useCallback(() => { setLoadFailed(true); }, []);
@@ -163,11 +149,12 @@ export function SessionScreen() {
     if (r.cycleAdvanced) advanceCycle(r.nextSeenIds, r.nextCycleNumber);
     if (!r.videoId) return;
     setLoadFailed(false);
-    setSession((s) => (s ? { ...s, activeVideoId: r.videoId!, phase: 'watching' } : s));
+    setSession((s) => (s ? { ...s, activeVideoId: r.videoId!, phase: 'practicing' } : s));
   }, [content, session, libraryVideos, progress.seenVideoIds, progress.cycleNumber, advanceCycle]);
 
   const handleNext = useCallback(() => {
     if (!content || !session) return;
+    setLoadFailed(false);
     markSeenAction(session.activeVideoId);
     const libIds = libraryVideos.map((v) => v.id);
     const r = pickNextVideo({
@@ -242,31 +229,16 @@ export function SessionScreen() {
       />
 
       <div className="mt-4">
-        {session.phase === 'watching' ? (
-          loadFailed ? (
-            <div className="rounded-2xl bg-red-500/10 border border-red-500/40 p-6 text-center">
-              <p className="text-red-200 mb-4">This video didn't load.</p>
-              <Button variant="secondary" onClick={handleSkip}>Skip to another video</Button>
-            </div>
-          ) : (
-            <>
-              <VideoPlayer
-                key={activeVideo.id}
-                video={activeVideo}
-                onEnded={handleVideoEnded}
-                onLoadError={handleLoadError}
-              />
-              <VideoMeta video={activeVideo} />
-            </>
-          )
-        ) : session.phase === 'practicing' ? (
+        {session.phase === 'practicing' ? (
           <PracticeArea
             session={session}
             targetMs={targetMs}
             onNext={handleNext}
             onStop={handleStop}
-            onWatchAgain={handleWatchAgain}
+            onSkip={handleSkip}
             onDrillRunningChange={handleDrillRunningChange}
+            onLoadError={handleLoadError}
+            loadFailed={loadFailed}
             mode={effectiveMode}
             activeVideo={activeVideo}
           />
@@ -307,25 +279,15 @@ function SessionHeader({
   );
 }
 
-/** Title + optional description shown below the video during the watching phase. */
-function VideoMeta({ video }: { video: VideoRef }) {
-  return (
-    <div className="max-w-2xl mx-auto mt-3 px-1">
-      <h2 className="text-lg font-bold leading-snug">{video.title}</h2>
-      {video.description && (
-        <p className="text-white/70 text-sm mt-1 leading-relaxed">{video.description}</p>
-      )}
-    </div>
-  );
-}
-
 function PracticeArea({
   session,
   targetMs,
   onNext,
   onStop,
-  onWatchAgain,
+  onSkip,
   onDrillRunningChange,
+  onLoadError,
+  loadFailed,
   mode,
   activeVideo,
 }: {
@@ -333,8 +295,10 @@ function PracticeArea({
   targetMs: number | null;
   onNext: () => void;
   onStop: () => void;
-  onWatchAgain: () => void;
+  onSkip: () => void;
   onDrillRunningChange: (running: boolean) => void;
+  onLoadError: () => void;
+  loadFailed: boolean;
   mode: SessionMode;
   activeVideo: VideoRef;
 }) {
@@ -358,6 +322,21 @@ function PracticeArea({
       transition={{ type: 'spring', stiffness: 220, damping: 24 }}
       className="flex flex-col items-center gap-5 mt-4"
     >
+      {/* The training clip loops continuously while drilling. */}
+      {loadFailed ? (
+        <div className="w-full rounded-2xl bg-red-500/10 border border-red-500/40 p-6 text-center">
+          <p className="text-red-200 mb-4">This video didn't load.</p>
+          <Button variant="secondary" onClick={onSkip}>Skip to another video</Button>
+        </div>
+      ) : (
+        <VideoPlayer
+          key={activeVideo.id}
+          video={activeVideo}
+          onLoadError={onLoadError}
+          loop
+        />
+      )}
+
       {/* Secondary, glanceable session indicator — shows how much of the
           overall session goal is left, with no numbers to focus on. */}
       {targetMs ? (
@@ -394,7 +373,6 @@ function PracticeArea({
       <p className="text-white/60 text-center px-4 text-sm">When you’re ready for the next skill:</p>
 
       <div className="w-full space-y-3">
-        <Button variant="secondary" size="lg" fullWidth onClick={onWatchAgain}>↺ Watch video again</Button>
         <Button variant="primary" size="xl" fullWidth onClick={onNext}>Next video →</Button>
         {mode !== 'daily' && (
           <Button variant="ice" size="lg" fullWidth onClick={onStop}>Stop — bank {formatMin(total)}</Button>
