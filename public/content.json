@@ -37,18 +37,34 @@
       "name": "Anya",
       "videos": [
         {
-          "url": "https://www.youtube.com/watch?v=v7AYKMP6rOE",
-          "title": "Yoga for beginners",
-          "description": "Full 20-min beginner flow. Follow along and hold each pose."
+          "url": "https://www.youtube.com/watch?v=9g4z0gFlfpA",
+          "title": "Good Morning Workout",
+          "description": "10-min beginner-friendly full body workout to start the day."
         },
         {
-          "url": "https://www.youtube.com/watch?v=FI_p0x6vxCE",
-          "title": "Morning yoga stretch",
-          "description": "Wake-up sequence — cat-cow, downward dog, sun salutation."
+          "url": "https://www.youtube.com/watch?v=LvV7K_i7aDQ",
+          "title": "Full Body Sweat Sesh",
+          "description": "10-min full body workout — no repeats, no jumping, no equipment."
         },
         {
-          "url": "https://www.youtube.com/watch?v=4pKly2JojMw",
-          "title": "Yoga for flexibility"
+          "url": "https://www.youtube.com/watch?v=yaDVOKUkrRQ",
+          "title": "Lazy Girl Full Body Workout",
+          "description": "10-min low-impact full body workout done lying down, no jumping."
+        },
+        {
+          "url": "https://www.youtube.com/watch?v=_IE-wDIpYA8",
+          "title": "Happy HIIT Workout",
+          "description": "10-min all-standing HIIT full body workout, no jumping, beginner friendly."
+        },
+        {
+          "url": "https://www.youtube.com/watch?v=xCSaHRtgw1w",
+          "title": "Total Beginner Full Body Workout",
+          "description": "15-min full body workout — no repeats, no equipment, no jumping."
+        },
+        {
+          "url": "https://www.youtube.com/watch?v=u3UjeyPOjoU",
+          "title": "Hourglass Pilates Workout",
+          "description": "10-min everyday full body pilates workout, no equipment, beginner friendly."
         }
       ]
     }
