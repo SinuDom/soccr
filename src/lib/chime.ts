@@ -50,24 +50,42 @@ export function playFinishedChime() {
     void ctx.resume?.();
 
     const now = ctx.currentTime;
-    // A rising two-note chime: E6 then B6 for a bright, "success" feel.
+
+    // Loud enough for a phone lying on the grass: the notes drive near full
+    // scale into a compressor, which tames the overlap instead of clipping.
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -12;
+    comp.knee.value = 12;
+    comp.ratio.value = 6;
+    comp.attack.value = 0.002;
+    comp.release.value = 0.25;
+    comp.connect(ctx.destination);
+
+    // A rising four-note major arpeggio (G5 C6 E6 G6) with long ringing
+    // tails — a clear, ~2s "you're done" bell instead of a short blip.
     const notes = [
-      { freq: 1318.51, start: 0, dur: 0.35 },
-      { freq: 1567.98, start: 0.16, dur: 0.45 },
+      { freq: 783.99, start: 0.0, dur: 0.9 },
+      { freq: 1046.5, start: 0.18, dur: 0.9 },
+      { freq: 1318.51, start: 0.36, dur: 1.0 },
+      { freq: 1567.98, start: 0.54, dur: 1.5 },
     ];
 
     for (const n of notes) {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.value = n.freq;
       const t0 = now + n.start;
-      gain.gain.setValueAtTime(0.0001, t0);
-      gain.gain.exponentialRampToValueAtTime(0.35, t0 + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + n.dur);
-      osc.connect(gain).connect(ctx.destination);
-      osc.start(t0);
-      osc.stop(t0 + n.dur + 0.05);
+      // Each note is a fundamental plus a quieter octave partial for a
+      // brighter, bell-like timbre that carries better on small speakers.
+      for (const [mult, peak] of [[1, 0.85], [2, 0.3]] as const) {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = n.freq * mult;
+        gain.gain.setValueAtTime(0.0001, t0);
+        gain.gain.exponentialRampToValueAtTime(peak, t0 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t0 + n.dur);
+        osc.connect(gain).connect(comp);
+        osc.start(t0);
+        osc.stop(t0 + n.dur + 0.05);
+      }
     }
     // The shared context stays open — it is reused for every later chime.
   } catch {
