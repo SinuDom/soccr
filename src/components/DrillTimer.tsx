@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { ProgressRing } from './ProgressRing';
 import { formatClock } from './PracticeClock';
 import { Icon, type IconName } from './Icon';
-import { playFinishedChime } from '@/lib/chime';
+import { playFinishedChime, unlockChime } from '@/lib/chime';
 
 type Phase = 'idle' | 'running' | 'paused' | 'done';
 
@@ -135,6 +135,9 @@ export function DrillTimer({ seconds, index, label: customLabel, onChange, onAct
   }, [phase]);
 
   const start = useCallback(() => {
+    // Runs inside the tap — unlock audio now so the finish chime is allowed
+    // to sound when the countdown ends, long after this gesture.
+    unlockChime();
     endAtRef.current = Date.now() + totalMs;
     setRemainingMs(totalMs);
     setPhase('running');
@@ -148,6 +151,7 @@ export function DrillTimer({ seconds, index, label: customLabel, onChange, onAct
   }, []);
 
   const resume = useCallback(() => {
+    unlockChime();
     endAtRef.current = Date.now() + remainingMs;
     setPhase('running');
   }, [remainingMs]);
