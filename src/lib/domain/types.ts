@@ -16,13 +16,24 @@ export interface VideoRef {
   timer?: number;
 }
 
+export interface Category {
+  id: string;                 // stable slug (explicit id or derived from name)
+  name: string;               // display name
+  targetMinutes: number;      // daily practice target for this category
+  videos: VideoRef[];         // this category's library
+}
+
 export interface User {
   id: string;                 // slug derived from name
   name: string;               // display name
-  videos: VideoRef[];         // this user's library
+  categories: Category[];     // this user's library, grouped by category
 }
 
 export interface Settings {
+  /**
+   * Default per-category daily target, in minutes. Categories without their
+   * own targetMinutes (and legacy flat video lists) fall back to this.
+   */
   sessionTargetMinutes: number;
   pointsPerExtraMinute: number;
   freezeCostPoints: number;
@@ -38,6 +49,7 @@ export interface HistoryEntry {
   pointsEarned: number;
   videoIds: string[];
   completedDaily?: boolean;  // true iff daily-mode session credited the streak
+  categoryId?: string;       // daily mode: which category this session drilled
 }
 
 /**
@@ -50,8 +62,14 @@ export interface HistoryEntry {
  */
 export interface DrillDayProgress {
   date: string;                          // YYYY-MM-DD local this progress applies to
-  practiceMs: number;                    // credited daily practice time from finished timers today
+  practiceMs: number;                    // credited daily practice time from finished timers today (all categories)
   finished: Record<string, number[]>;    // videoId -> finished timer indices (0-based)
+  /**
+   * Ids of categories whose daily target was hit today (their daily session
+   * auto-ended). The streak is credited once EVERY category is complete.
+   * Optional so drill days persisted by older builds keep loading.
+   */
+  completedCategories?: string[];
 }
 
 export interface Progress {

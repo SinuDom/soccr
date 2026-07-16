@@ -1,4 +1,4 @@
-import type { User, VideoRef } from '@/lib/domain/types';
+import type { Category, User, VideoRef } from '@/lib/domain/types';
 import type { Content, RawContentEntry, RawContentFile } from './types';
 import { detectPlatform, hashUrl } from './url';
 
@@ -17,8 +17,10 @@ export function slugifyUserId(name: string): string {
 
 /**
  * Validate a parsed content.json and derive the internal Content object.
- * Accepts either the new users[] shape or the legacy top-level videos[] shape
- * (in which case a single implicit user "Everyone" holds the whole library).
+ * Accepts the users[] shape (each user holding categories[] with per-category
+ * daily targets, or a legacy flat videos[] that becomes one implicit
+ * category), or the legacy top-level videos[] shape (in which case a single
+ * implicit user "Everyone" holds the whole library).
  */
 export function validateContent(raw: unknown): ValidationResult {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
@@ -54,20 +56,17 @@ export function validateContent(raw: unknown): ValidationResult {
         if (!id) throw new Error(`users[${i}].name is empty after slugifying.`);
         if (seenIds.has(id)) throw new Error(`Duplicate user id "${id}" (from name "${(u as any).name}").`);
         seenIds.add(id);
-        if (!Array.isArray((u as any).videos)) {
-          throw new Error(`users[${i}].videos must be an array.`);
-        }
         return {
           id,
           name: (u as any).name.trim(),
-          videos: parseVideos((u as any).videos, `users[${i}].videos`),
+          categories: parseCategories(u, s.sessionTargetMinutes, `users[${i}]`),
         };
       });
     } else if (Array.isArray(obj.videos)) {
       users = [{
         id: 'everyone',
         name: 'Everyone',
-        videos: parseVideos(obj.videos, 'videos'),
+        categories: [implicitCategory(parseVideos(obj.videos, 'videos'), s.sessionTargetMinutes)],
       }];
     } else {
       return { ok: false, message: 'Missing "users" array (or legacy "videos" array).' };
@@ -91,8 +90,69 @@ export function validateContent(raw: unknown): ValidationResult {
   };
 }
 
-function parseVideos(list: RawContentEntry[], where: string): VideoRef[] {
-  const seenIds = new Set<string>();
+/** The single category a legacy flat video list collapses into. */
+function implicitCategory(videos: VideoRef[], defaultTargetMinutes: number): Category {
+  return { id: 'practice', name: 'Practice', targetMinutes: defaultTargetMinutes, videos };
+}
+
+/**
+ * Parse one user's library: either categories[] (each with an optional
+ * per-category daily target falling back to settings.sessionTargetMinutes) or
+ * a legacy flat videos[] that becomes one implicit category. Video URLs must
+ * be unique across the WHOLE user, not just within a category.
+ */
+function parseCategories(u: unknown, defaultTargetMinutes: number, where: string): Category[] {
+  const rawCategories = (u as any).categories;
+  const rawVideos = (u as any).videos;
+
+  if (rawCategories === undefined) {
+    if (!Array.isArray(rawVideos)) {
+      throw new Error(`${where} must have a "categories" (or legacy "videos") array.`);
+    }
+    return [implicitCategory(parseVideos(rawVideos, `${where}.videos`), defaultTargetMinutes)];
+  }
+
+  if (!Array.isArray(rawCategories) || rawCategories.length === 0) {
+    throw new Error(`${where}.categories must be a non-empty array.`);
+  }
+  const seenCategoryIds = new Set<string>();
+  const seenVideoIds = new Set<string>();
+  return rawCategories.map((c, i) => {
+    const at = `${where}.categories[${i}]`;
+    if (!c || typeof c !== 'object' || typeof (c as any).name !== 'string' || !(c as any).name.trim()) {
+      throw new Error(`${at} must be an object with a non-empty "name" string.`);
+    }
+    const rawId = (c as any).id;
+    if (rawId !== undefined && typeof rawId !== 'string') {
+      throw new Error(`${at}.id must be a string.`);
+    }
+    const id = slugifyUserId(rawId ?? (c as any).name);
+    if (!id) throw new Error(`${at} id is empty after slugifying.`);
+    if (seenCategoryIds.has(id)) throw new Error(`Duplicate category id "${id}" in ${where}.`);
+    seenCategoryIds.add(id);
+
+    const rawTarget = (c as any).targetMinutes;
+    let targetMinutes = defaultTargetMinutes;
+    if (rawTarget !== undefined) {
+      if (typeof rawTarget !== 'number' || !Number.isInteger(rawTarget) || rawTarget < 1) {
+        throw new Error(`${at}.targetMinutes must be a positive integer number of minutes.`);
+      }
+      targetMinutes = rawTarget;
+    }
+
+    if (!Array.isArray((c as any).videos)) {
+      throw new Error(`${at}.videos must be an array.`);
+    }
+    return {
+      id,
+      name: (c as any).name.trim(),
+      targetMinutes,
+      videos: parseVideos((c as any).videos, `${at}.videos`, seenVideoIds),
+    };
+  });
+}
+
+function parseVideos(list: RawContentEntry[], where: string, seenIds = new Set<string>()): VideoRef[] {
   return list.map((entry, i) => {
     if (!entry || typeof entry !== 'object' || typeof (entry as any).url !== 'string') {
       throw new Error(`${where}[${i}] must be an object with a "url" string.`);
@@ -100,7 +160,7 @@ function parseVideos(list: RawContentEntry[], where: string): VideoRef[] {
     const url = (entry as any).url as string;
     const id = hashUrl(url);
     if (seenIds.has(id)) {
-      throw new Error(`Duplicate video URL in ${where} at index ${i}: ${url}`);
+      throw new Error(`Duplicate video URL at ${where}[${i}]: ${url} (URLs must be unique per user, across categories).`);
     }
     seenIds.add(id);
     const title = typeof (entry as any).title === 'string' && (entry as any).title.trim().length > 0

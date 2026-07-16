@@ -1,6 +1,7 @@
 import { create } from 'zustand';
-import type { HistoryEntry, Progress, Settings, User, Vault } from '@/lib/domain/types';
+import type { Category, HistoryEntry, Progress, Settings, User, Vault } from '@/lib/domain/types';
 import { DEFAULT_PROGRESS, DEFAULT_VAULT } from '@/lib/domain/types';
+import { allCategoriesComplete, markCategoryCompleted } from '@/lib/domain/categories';
 import { load, save } from '@/lib/storage/progress';
 import { LEGACY_USER_ID } from '@/lib/storage/migrate';
 import {
@@ -46,7 +47,18 @@ interface ProgressState {
   markSeen: (videoId: string) => void;
   advanceCycle: (nextSeenIds: string[], nextCycleNumber: number) => void;
 
-  creditDaily: (todayISO: string, entry: Omit<HistoryEntry, 'completedDaily'>) => void;
+  /**
+   * Record a finished daily category session: mark the category's target as
+   * hit today and log the history entry. Once EVERY category in `categories`
+   * is complete for the day, the streak is credited. Returns whether the
+   * whole daily goal is now complete.
+   */
+  creditDailyCategory: (
+    todayISO: string,
+    category: Category,
+    categories: Category[],
+    entry: Omit<HistoryEntry, 'completedDaily'>,
+  ) => boolean;
   bankExtraTime: (settings: Settings, entry: Omit<HistoryEntry, 'pointsEarned'>) => number;
 
   /**
@@ -168,11 +180,15 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
     commitActive(set, get, { ...p, seenVideoIds: nextSeenIds, cycleNumber: nextCycleNumber });
   },
 
-  creditDaily: (todayISO, entry) => {
+  creditDailyCategory: (todayISO, category, categories, entry) => {
     const p = get().progress;
-    const after = applyDailyCompletion(p, todayISO);
-    const history = [...after.history, { ...entry, completedDaily: true }];
+    const drillDay = markCategoryCompleted(p.drillDay, todayISO, category.id);
+    const allDone = allCategoriesComplete(drillDay, todayISO, categories);
+    const base: Progress = { ...p, drillDay };
+    const after = allDone ? applyDailyCompletion(base, todayISO) : base;
+    const history = [...after.history, { ...entry, completedDaily: allDone }];
     commitActive(set, get, { ...after, history });
+    return allDone;
   },
 
   bankExtraTime: (settings, entry) => {
@@ -192,7 +208,8 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
     const existing = day.finished[videoId] ?? [];
     if (existing.includes(timerIndex)) return; // already credited today — idempotent
     const finished = { ...day.finished, [videoId]: [...existing, timerIndex] };
-    const drillDay = { date: todayISO, practiceMs: day.practiceMs + Math.max(0, timerMs), finished };
+    // Spread `day` so completedCategories (and any future fields) survive.
+    const drillDay = { ...day, practiceMs: day.practiceMs + Math.max(0, timerMs), finished };
     commitActive(set, get, { ...p, drillDay });
   },
 

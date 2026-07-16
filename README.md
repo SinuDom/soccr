@@ -52,6 +52,8 @@ You never invent an ID. The app derives a stable internal ID by hashing the vide
 
 ### Full example
 
+Each user's videos are grouped into **categories**, and each category carries its own daily target (`targetMinutes`, in minutes). The daily goal — and the streak — is earned once **every** category's target is reached that day; each daily session drills one category at a time (the app asks which one first).
+
 ```json
 {
   "settings": {
@@ -61,17 +63,37 @@ You never invent an ID. The app derives a stable internal ID by hashing the vide
     "maxFreezesHeld": 1,
     "recycleWhenLibraryExhausted": true
   },
-  "videos": [
-    { "url": "https://www.youtube.com/watch?v=BSKlAB_iH1Q", "title": "Elastico drill" },
-    { "url": "https://www.instagram.com/reel/CxYz1_abc/",   "title": "Cruyff turn" },
-    { "url": "https://www.tiktok.com/@user/video/1234567890", "title": "La Croqueta" }
+  "users": [
+    {
+      "name": "Leon",
+      "categories": [
+        {
+          "id": "ball",
+          "name": "Ball control",
+          "targetMinutes": 10,
+          "videos": [
+            { "url": "https://www.youtube.com/watch?v=BSKlAB_iH1Q", "title": "Elastico drill" },
+            { "url": "https://www.instagram.com/reel/CxYz1_abc/",   "title": "Cruyff turn" }
+          ]
+        },
+        {
+          "name": "Speed",
+          "targetMinutes": 5,
+          "videos": [
+            { "url": "https://www.tiktok.com/@user/video/1234567890", "title": "La Croqueta" }
+          ]
+        }
+      ]
+    }
   ]
 }
 ```
 
+`id` is optional (defaults to a slug of the category name — keep it stable once set) and `targetMinutes` is optional (defaults to `settings.sessionTargetMinutes`). A user may instead carry a legacy flat `videos` array, which behaves as a single category targeting `settings.sessionTargetMinutes`.
+
 ### To add a video
 
-Add one object to `videos`:
+Add one object to the right category's `videos`:
 
 ```json
 { "url": "https://www.youtube.com/watch?v=NEW_ID", "title": "What the drill is" }
@@ -85,7 +107,7 @@ Edit the number in `settings`. All settings are read at runtime — no code chan
 
 | Setting | Meaning |
 |---|---|
-| `sessionTargetMinutes` | Daily goal (in minutes) that credits the streak |
+| `sessionTargetMinutes` | Default per-category daily target (in minutes) for categories without their own `targetMinutes` |
 | `pointsPerExtraMinute` | Points earned per minute of Extra Time practice |
 | `freezeCostPoints` | Cost of one streak freeze in the shop |
 | `maxFreezesHeld` | Cap on freezes on hand at once (the shop disables Buy at cap) |

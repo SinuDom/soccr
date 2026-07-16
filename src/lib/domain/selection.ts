@@ -47,7 +47,10 @@ export function pickNextVideo(input: SelectionInput): SelectionResult {
     };
   }
 
-  // Recycle: cycle advances, seen list clears, pick fresh from full library.
+  // Recycle: cycle advances and the seen entries for THIS library clear, then
+  // pick fresh from the full library. Ids outside the library (e.g. other
+  // categories' videos) are kept so recycling one category never resets the
+  // others.
   const idx = Math.floor(rng() * input.libraryIds.length);
   const clamped = Math.min(input.libraryIds.length - 1, Math.max(0, idx));
   const picked = input.libraryIds[clamped]!;
@@ -55,7 +58,7 @@ export function pickNextVideo(input: SelectionInput): SelectionResult {
     videoId: picked,
     cycleAdvanced: true,
     nextCycleNumber: input.cycleNumber + 1,
-    nextSeenIds: [], // caller will add `picked` via markSeen()
+    nextSeenIds: input.seenIds.filter((id) => !libSet.has(id)), // caller will add `picked` via markSeen()
   };
 }
 

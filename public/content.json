@@ -10,75 +10,96 @@
   "users": [
     {
       "name": "Leon",
-      "videos": [
+      "categories": [
         {
-          "url": "https://www.youtube.com/shorts/--llBGWd4JA",
-          "title": "Ball 1",
-          "description": "Csinald mind a 3 gyakorlatot 2 percig.",
-          "timerTitles": ["Jobb", "Ball", "Mindketto"],
-          "timer": 120
+          "id": "ball",
+          "name": "Ball control",
+          "targetMinutes": 10,
+          "videos": [
+            {
+              "url": "https://www.youtube.com/shorts/--llBGWd4JA",
+              "title": "Ball 1",
+              "description": "Csinald mind a 3 gyakorlatot 2 percig.",
+              "timerTitles": ["Jobb", "Ball", "Mindketto"],
+              "timer": 120
+            },
+            {
+              "url": "https://www.youtube.com/shorts/V4Q4H7CXomM",
+              "title": "Ball 2",
+              "description": "Mind a 3 gyakorlatot 2 percig.",
+              "timerTitles": ["Lab kozott passz", "Huzogatni", "Belulrol kifele"],
+              "timer": 90
+            },
+            {
+              "url": "https://www.youtube.com/shorts/2s9Vy5UlTac",
+              "title": "Ball 3",
+              "description": "A 'Double L-Drags' gyakorlat nem kell.",
+              "timerTitles": ["Instep-Outstep Jobb", "Instep-Outstep Bal", "L-Drag"],
+              "timer": 90
+            },
+            {
+              "url": "https://www.youtube.com/shorts/uBgZvWDG9yA",
+              "title": "Ball 4",
+              "description": "Osszes gyakorlat",
+              "timerTitles": ["One", "Two", "Three", "Four Jobb", "Four Bal", "Five"],
+              "timer": 90
+            }
+          ]
         },
         {
-          "url": "https://www.youtube.com/shorts/_eraYN00_Vg",
-          "title": "Speed 1",
-          "description": "A palyat bolyakkal csinald. Kis szunetet tarts es csinald 2 percig osszesen",
-          "timer": 120
-        },
-        {
-          "url": "https://www.youtube.com/shorts/V4Q4H7CXomM",
-          "title": "Ball 2",
-          "description": "Mind a 3 gyakorlatot 2 percig.",
-          "timerTitles": ["Lab kozott passz", "Huzogatni", "Belulrol kifele"],
-          "timer": 90
-        },
-        {
-          "url": "https://www.youtube.com/shorts/2s9Vy5UlTac",
-          "title": "Ball 3",
-          "description": "A 'Double L-Drags' gyakorlat nem kell.",
-          "timerTitles": ["Instep-Outstep Jobb", "Instep-Outstep Bal", "L-Drag"],
-          "timer": 90
-        },
-        {
-          "url": "https://www.youtube.com/shorts/uBgZvWDG9yA",
-          "title": "Ball 4",
-          "description": "Osszes gyakorlat",
-          "timerTitles": ["One", "Two", "Three", "Four Jobb", "Four Bal", "Five"],
-          "timer": 90
+          "id": "speed",
+          "name": "Speed",
+          "targetMinutes": 2,
+          "videos": [
+            {
+              "url": "https://www.youtube.com/shorts/_eraYN00_Vg",
+              "title": "Speed 1",
+              "description": "A palyat bolyakkal csinald. Kis szunetet tarts es csinald 2 percig osszesen",
+              "timer": 120
+            }
+          ]
         }
       ]
     },
     {
       "name": "Anya",
-      "videos": [
+      "categories": [
         {
-          "url": "https://www.youtube.com/watch?v=9g4z0gFlfpA",
-          "title": "Good Morning Workout",
-          "description": "10-min beginner-friendly full body workout to start the day."
-        },
-        {
-          "url": "https://www.youtube.com/watch?v=LvV7K_i7aDQ",
-          "title": "Full Body Sweat Sesh",
-          "description": "10-min full body workout — no repeats, no jumping, no equipment."
-        },
-        {
-          "url": "https://www.youtube.com/watch?v=yaDVOKUkrRQ",
-          "title": "Lazy Girl Full Body Workout",
-          "description": "10-min low-impact full body workout done lying down, no jumping."
-        },
-        {
-          "url": "https://www.youtube.com/watch?v=_IE-wDIpYA8",
-          "title": "Happy HIIT Workout",
-          "description": "10-min all-standing HIIT full body workout, no jumping, beginner friendly."
-        },
-        {
-          "url": "https://www.youtube.com/watch?v=xCSaHRtgw1w",
-          "title": "Total Beginner Full Body Workout",
-          "description": "15-min full body workout — no repeats, no equipment, no jumping."
-        },
-        {
-          "url": "https://www.youtube.com/watch?v=u3UjeyPOjoU",
-          "title": "Hourglass Pilates Workout",
-          "description": "10-min everyday full body pilates workout, no equipment, beginner friendly."
+          "id": "workout",
+          "name": "Workout",
+          "targetMinutes": 15,
+          "videos": [
+            {
+              "url": "https://www.youtube.com/watch?v=9g4z0gFlfpA",
+              "title": "Good Morning Workout",
+              "description": "10-min beginner-friendly full body workout to start the day."
+            },
+            {
+              "url": "https://www.youtube.com/watch?v=LvV7K_i7aDQ",
+              "title": "Full Body Sweat Sesh",
+              "description": "10-min full body workout — no repeats, no jumping, no equipment."
+            },
+            {
+              "url": "https://www.youtube.com/watch?v=yaDVOKUkrRQ",
+              "title": "Lazy Girl Full Body Workout",
+              "description": "10-min low-impact full body workout done lying down, no jumping."
+            },
+            {
+              "url": "https://www.youtube.com/watch?v=_IE-wDIpYA8",
+              "title": "Happy HIIT Workout",
+              "description": "10-min all-standing HIIT full body workout, no jumping, beginner friendly."
+            },
+            {
+              "url": "https://www.youtube.com/watch?v=xCSaHRtgw1w",
+              "title": "Total Beginner Full Body Workout",
+              "description": "15-min full body workout — no repeats, no equipment, no jumping."
+            },
+            {
+              "url": "https://www.youtube.com/watch?v=u3UjeyPOjoU",
+              "title": "Hourglass Pilates Workout",
+              "description": "10-min everyday full body pilates workout, no equipment, beginner friendly."
+            }
+          ]
         }
       ]
     }

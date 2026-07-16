@@ -3,6 +3,31 @@
   "title": "Content Schema",
   "type": "object",
   "required": ["settings", "users"],
+  "definitions": {
+    "videos": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["url", "title"],
+        "properties": {
+          "url": { "type": "string", "format": "uri" },
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "timerTitles": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Individual titles for each drill timer/set. The nth string labels the nth timer, and the array length determines how many drill timers are shown next to each other."
+          },
+          "timer": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "How long to perform one drill, in seconds."
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
   "properties": {
     "$schema": { "type": "string" },
     "settings": {
@@ -15,7 +40,11 @@
         "recycleWhenLibraryExhausted"
       ],
       "properties": {
-        "sessionTargetMinutes": { "type": "integer", "minimum": 1 },
+        "sessionTargetMinutes": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Default per-category daily target, in minutes. Categories without their own targetMinutes (and legacy flat video lists) fall back to this."
+        },
         "pointsPerExtraMinute": { "type": "integer", "minimum": 0 },
         "freezeCostPoints": { "type": "integer", "minimum": 0 },
         "maxFreezesHeld": { "type": "integer", "minimum": 0 },
@@ -27,31 +56,39 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["name", "videos"],
+        "required": ["name"],
+        "anyOf": [
+          { "required": ["categories"] },
+          { "required": ["videos"] }
+        ],
         "properties": {
           "name": { "type": "string" },
-          "videos": {
+          "categories": {
             "type": "array",
+            "minItems": 1,
+            "description": "This user's videos grouped into categories, each with its own daily target. The daily goal (streak) is earned once EVERY category's target is reached.",
             "items": {
               "type": "object",
-              "required": ["url", "title"],
+              "required": ["name", "videos"],
               "properties": {
-                "url": { "type": "string", "format": "uri" },
-                "title": { "type": "string" },
-                "description": { "type": "string" },
-                "timerTitles": {
-                  "type": "array",
-                  "items": { "type": "string" },
-                  "description": "Individual titles for each drill timer/set. The nth string labels the nth timer, and the array length determines how many drill timers are shown next to each other."
+                "id": {
+                  "type": "string",
+                  "description": "Stable category id; defaults to a slug of the name. Must be unique per user."
                 },
-                "timer": {
+                "name": { "type": "string" },
+                "targetMinutes": {
                   "type": "integer",
                   "minimum": 1,
-                  "description": "How long to perform one drill, in seconds."
-                }
+                  "description": "Daily practice target for this category, in minutes; defaults to settings.sessionTargetMinutes."
+                },
+                "videos": { "$ref": "#/definitions/videos" }
               },
               "additionalProperties": false
             }
+          },
+          "videos": {
+            "$ref": "#/definitions/videos",
+            "description": "Legacy flat list — becomes a single implicit category targeting settings.sessionTargetMinutes."
           }
         },
         "additionalProperties": false

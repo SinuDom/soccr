@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { allVideos } from '@/lib/domain/categories';
 import { useContentStore, getUser } from '@/store/contentStore';
 import { useProgressStore } from '@/store/progressStore';
 import { Button } from '@/components/Button';
@@ -91,7 +92,7 @@ export function Settings() {
                     {u.name}{u.id === activeUserId ? ' (active)' : ''}
                   </span>
                   <span className="text-white/50 tabular text-xs">
-                    {u.videos.length} videos · streak {p?.currentStreak ?? 0} · {p?.points ?? 0} pts
+                    {allVideos(u).length} videos · {u.categories.length} cat · streak {p?.currentStreak ?? 0} · {p?.points ?? 0} pts
                   </span>
                 </li>
               );
@@ -109,7 +110,7 @@ export function Settings() {
       <Section title="Content settings (from content.json)">
         {content ? (
           <dl className="grid grid-cols-2 gap-2 text-sm">
-            <SettingRow label="Session target" value={`${content.settings.sessionTargetMinutes} min`} />
+            <SettingRow label="Default session target" value={`${content.settings.sessionTargetMinutes} min`} />
             <SettingRow label="Points / extra minute" value={content.settings.pointsPerExtraMinute} />
             <SettingRow label="Freeze cost" value={`${content.settings.freezeCostPoints} pts`} />
             <SettingRow label="Max freezes held" value={content.settings.maxFreezesHeld} />

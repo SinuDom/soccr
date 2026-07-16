@@ -3,7 +3,13 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useContentStore, getUser } from '@/store/contentStore';
 import { useProgressStore } from '@/store/progressStore';
-import type { VideoRef, SessionMode, HistoryEntry } from '@/lib/domain/types';
+import type { Category, DrillDayProgress, VideoRef, SessionMode, HistoryEntry } from '@/lib/domain/types';
+import {
+  allVideos,
+  categoryPracticeMs,
+  isCategoryComplete,
+  practiceableCategories,
+} from '@/lib/domain/categories';
 import { markSeen as markSeenPure, pickNextVideo } from '@/lib/domain/selection';
 import {
   endEarly,
@@ -20,6 +26,7 @@ import { toLocalDateString } from '@/lib/domain/streak';
 import { PracticeClock } from '@/components/PracticeClock';
 import { DrillTimers } from '@/components/DrillTimer';
 import { Button } from '@/components/Button';
+import { Icon } from '@/components/Icon';
 import { Modal } from '@/components/Modal';
 import { VideoPlayer } from '@/components/VideoPlayer';
 import { isYouTubeShort } from '@/lib/content/url';
@@ -35,18 +42,32 @@ export function SessionScreen() {
   // Library "play" links pass ?lib=1: just play the video, no drill timers.
   const libraryMode = useMemo(() => new URLSearchParams(window.location.search).get('lib') === '1', []);
   const effectiveMode: SessionMode = manualId ? 'manual' : mode;
+  // Daily sessions run against ONE category. It can be deep-linked (?cat=...);
+  // otherwise the in-screen picker below asks for it before anything starts.
+  const catParam = useMemo(() => new URLSearchParams(window.location.search).get('cat'), []);
+  const [categoryId, setCategoryId] = useState<string | null>(catParam);
 
   const content = useContentStore((s) => s.content);
   const activeUserId = useProgressStore((s) => s.activeUserId);
   const progress = useProgressStore((s) => s.progress);
   const markSeenAction = useProgressStore((s) => s.markSeen);
   const advanceCycle = useProgressStore((s) => s.advanceCycle);
-  const creditDaily = useProgressStore((s) => s.creditDaily);
+  const creditDailyCategory = useProgressStore((s) => s.creditDailyCategory);
   const bankExtraTime = useProgressStore((s) => s.bankExtraTime);
   const recordDrillFinished = useProgressStore((s) => s.recordDrillFinished);
 
   const activeUser = getUser(content, activeUserId);
-  const libraryVideos = activeUser?.videos ?? [];
+  const categories = activeUser ? practiceableCategories(activeUser) : [];
+  // Resolve the active category (daily mode only): the picked/deep-linked one,
+  // or straight to the single category when there is no real choice.
+  const category: Category | null = effectiveMode === 'daily'
+    ? (categories.find((c) => c.id === categoryId) ?? (categories.length === 1 ? categories[0]! : null))
+    : null;
+  // Daily sessions drill the chosen category's videos only; extra/manual
+  // sessions draw from the user's whole library.
+  const libraryVideos = activeUser
+    ? (category ? category.videos : allVideos(activeUser))
+    : [];
 
   const [session, setSession] = useState<Session | null>(null);
   const [confirmEnd, setConfirmEnd] = useState(false);
@@ -62,11 +83,13 @@ export function SessionScreen() {
   // "already counted" and drop their contribution.
   const finishedSnapshotRef = useRef<{ videoId: string; indices: number[] } | null>(null);
 
-  const targetMs = mode === 'daily' && content ? content.settings.sessionTargetMinutes * 60_000 : null;
+  const targetMs = category ? category.targetMinutes * 60_000 : null;
 
-  // Bootstrap: pick the first video from the ACTIVE USER's library.
+  // Bootstrap: pick the first video from the active category (daily) or the
+  // active user's whole library (extra/manual). Daily waits for a category.
   useEffect(() => {
     if (!content || !activeUser || initedRef.current) return;
+    if (effectiveMode === 'daily' && !category) return;
     initedRef.current = true;
     let firstId: string | null = null;
     if (manualId && libraryVideos.some((v) => v.id === manualId)) {
@@ -85,12 +108,12 @@ export function SessionScreen() {
     const now = Date.now();
     startedAtRef.current = now;
     // Daily goals can be continued across visits: seed the session with the
-    // drill time already credited earlier today from finished drill timers.
+    // drill time already credited to THIS category earlier today from
+    // finished drill timers.
     const today = toLocalDateString(new Date());
-    const dd = progress.drillDay && progress.drillDay.date === today ? progress.drillDay : null;
-    const baselineMs = mode === 'daily' ? (dd?.practiceMs ?? 0) : 0;
+    const baselineMs = category ? categoryPracticeMs(progress.drillDay, today, category) : 0;
     setSession(startSession({ mode: effectiveMode, firstVideoId: firstId, targetMs, now, baselineMs }));
-  }, [content, activeUser, manualId, targetMs, progress.seenVideoIds, progress.cycleNumber, advanceCycle, effectiveMode, libraryVideos]);
+  }, [content, activeUser, manualId, targetMs, progress.seenVideoIds, progress.cycleNumber, advanceCycle, effectiveMode, libraryVideos, category, progress.drillDay]);
 
   // Play the start-of-session intro once, then reveal the practice screen.
   useEffect(() => {
@@ -117,7 +140,7 @@ export function SessionScreen() {
     const videoIds = videoIdsWatched(s);
     for (const id of videoIds) markSeenAction(id);
 
-    if (s.mode === 'daily' && s.autoEnded) {
+    if (s.mode === 'daily' && s.autoEnded && category && activeUser) {
       const today = toLocalDateString(new Date());
       const entry: Omit<HistoryEntry, 'completedDaily'> = {
         date: today,
@@ -126,9 +149,12 @@ export function SessionScreen() {
         practiceMs,
         pointsEarned: 0,
         videoIds,
+        categoryId: category.id,
       };
-      creditDaily(today, entry);
-      nav(`/session/complete?mode=daily&ms=${practiceMs}`, { replace: true });
+      // Marks this category done for the day; the streak is credited (and the
+      // completion screen celebrates) once ALL categories are complete.
+      const allDone = creditDailyCategory(today, category, activeUser.categories, entry);
+      nav(`/session/complete?mode=daily&ms=${practiceMs}&cat=${encodeURIComponent(category.id)}&all=${allDone ? 1 : 0}`, { replace: true });
     } else {
       const entry: Omit<HistoryEntry, 'pointsEarned'> = {
         date: toLocalDateString(new Date()),
@@ -140,7 +166,7 @@ export function SessionScreen() {
       const earned = bankExtraTime(content.settings, entry);
       nav(`/session/complete?mode=${s.mode}&ms=${practiceMs}&pts=${earned}`, { replace: true });
     }
-  }, [content, creditDaily, bankExtraTime, markSeenAction, nav]);
+  }, [content, activeUser, category, creditDailyCategory, bankExtraTime, markSeenAction, nav]);
 
   // The session time is driven by the per-drill timers: as they count down (and
   // when they complete) they report their summed contribution, which we record
@@ -267,6 +293,19 @@ export function SessionScreen() {
       </div>
     );
   }
+  // Daily mode needs a category before anything starts: when the user has
+  // more than one (and none was deep-linked), ask first.
+  if (effectiveMode === 'daily' && !category) {
+    return (
+      <CategoryPicker
+        categories={categories}
+        drillDay={progress.drillDay}
+        userName={activeUser.name}
+        onPick={setCategoryId}
+        onBack={() => nav('/home', { replace: true })}
+      />
+    );
+  }
   if (!session) {
     return <div className="min-h-dvh grid place-items-center text-white/70">Loading…</div>;
   }
@@ -284,7 +323,9 @@ export function SessionScreen() {
   }
 
   const sessionProgress = targetMs ? Math.min(1, totalPracticeMs(session, Date.now()) / targetMs) : null;
-  const startLabel = mode === 'daily' ? 'Daily practice' : effectiveMode === 'manual' ? 'Manual pick' : 'Extra time';
+  const startLabel = mode === 'daily'
+    ? (category?.name ?? 'Daily practice')
+    : effectiveMode === 'manual' ? 'Manual pick' : 'Extra time';
 
   // Resolve the finished-timer snapshot for the active video, refreshing it
   // only when the active video changes (see finishedSnapshotRef).
@@ -306,6 +347,7 @@ export function SessionScreen() {
         targetMs={targetMs}
         sessionProgress={sessionProgress}
         userName={activeUser.name}
+        categoryName={category?.name}
         onQuit={() => setConfirmEnd(true)}
       />
 
@@ -392,12 +434,13 @@ export function SessionScreen() {
 }
 
 function SessionHeader({
-  session, targetMs, sessionProgress, userName, onQuit,
+  session, targetMs, sessionProgress, userName, categoryName, onQuit,
 }: {
   session: Session;
   targetMs: number | null;
   sessionProgress: number | null;
   userName: string;
+  categoryName?: string;
   onQuit: () => void;
 }) {
   const modeLabel = session.mode === 'daily'
@@ -420,7 +463,9 @@ function SessionHeader({
         // Daily target as a slim progress bar sitting right next to the exit.
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] uppercase tracking-widest text-white/45">Session goal</span>
+            <span className="text-[10px] uppercase tracking-widest text-white/45">
+              {categoryName ? `${categoryName} goal` : 'Session goal'}
+            </span>
             <span className="text-[10px] uppercase tracking-widest text-white/45 tabular">
               {Math.round(sessionProgress * 100)}%
             </span>
@@ -578,4 +623,100 @@ function formatMin(ms: number): string {
   const m = Math.floor(ms / 60_000);
   const s = Math.floor((ms % 60_000) / 1000);
   return `${m}m ${String(s).padStart(2, '0')}s`;
+}
+
+/**
+ * Pre-session category choice for daily mode: one card per category showing
+ * its daily target and today's progress (or a done check). Picking one starts
+ * the session for that category only.
+ */
+function CategoryPicker({
+  categories,
+  drillDay,
+  userName,
+  onPick,
+  onBack,
+}: {
+  categories: Category[];
+  drillDay: DrillDayProgress | undefined;
+  userName: string;
+  onPick: (categoryId: string) => void;
+  onBack: () => void;
+}) {
+  const today = toLocalDateString(new Date());
+  return (
+    <div className="min-h-dvh flex flex-col p-5 pt-8 max-w-xl mx-auto w-full">
+      <header className="flex items-center gap-3 mb-6">
+        <Button
+          variant="ghost"
+          size="sm"
+          iconOnly
+          icon="close"
+          onClick={onBack}
+          className="text-white/70 shrink-0"
+        >
+          Back home
+        </Button>
+        <div>
+          <div className="text-pitch-400 text-[11px] uppercase tracking-[0.3em]">{userName}</div>
+          <h1 className="text-2xl font-black tracking-tight">What are we drilling?</h1>
+        </div>
+      </header>
+
+      {categories.length === 0 ? (
+        <div className="rounded-2xl p-6 bg-ink-800 border border-ink-700 text-white/70 text-center">
+          No videos yet. Add some in <code className="rounded bg-black/30 px-1">public/content.json</code>.
+        </div>
+      ) : (
+        <ul className="space-y-3">
+          {categories.map((c, i) => {
+            const targetMs = c.targetMinutes * 60_000;
+            const done = isCategoryComplete(drillDay, today, c);
+            const pct = done ? 100 : Math.min(100, Math.round((categoryPracticeMs(drillDay, today, c) / targetMs) * 100));
+            return (
+              <motion.li
+                key={c.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05, type: 'spring', stiffness: 260, damping: 24 }}
+              >
+                <button
+                  type="button"
+                  onClick={() => onPick(c.id)}
+                  className={[
+                    'relative w-full overflow-hidden rounded-2xl border p-5 text-left',
+                    'transition-[transform] duration-150 ease-out active:scale-[0.98] motion-reduce:transform-none',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pitch-400',
+                    done ? 'border-pitch-500/40 bg-pitch-500/10' : 'border-ink-700 bg-ink-800 hover:border-ink-600',
+                  ].join(' ')}
+                >
+                  {/* Today's progress as a subtle fill behind the label. */}
+                  <span
+                    aria-hidden
+                    className="absolute inset-y-0 left-0 bg-pitch-500/15"
+                    style={{ width: `${pct}%` }}
+                  />
+                  <span className="relative z-10 flex items-center justify-between gap-3">
+                    <span>
+                      <span className="block font-bold text-lg leading-tight">{c.name}</span>
+                      <span className="block text-white/50 text-xs mt-0.5">
+                        {c.targetMinutes} min goal · {c.videos.length} video{c.videos.length === 1 ? '' : 's'}
+                      </span>
+                    </span>
+                    {done ? (
+                      <span className="inline-flex items-center gap-1.5 text-pitch-400 text-sm font-semibold shrink-0">
+                        <Icon name="check" size={16} /> Done
+                      </span>
+                    ) : (
+                      <span className="text-white/50 tabular text-sm font-semibold shrink-0">{pct}%</span>
+                    )}
+                  </span>
+                </button>
+              </motion.li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
 }

@@ -13,9 +13,21 @@ export interface RawContentEntry {
   timer?: number;
 }
 
+export interface RawContentCategory {
+  /** Stable id; defaults to a slug of the name. */
+  id?: string;
+  name: string;
+  /** Daily practice target in minutes; defaults to settings.sessionTargetMinutes. */
+  targetMinutes?: number;
+  videos: RawContentEntry[];
+}
+
 export interface RawContentUser {
   name: string;
-  videos: RawContentEntry[];
+  /** Videos grouped into categories, each with its own daily target. */
+  categories?: RawContentCategory[];
+  /** Legacy flat list — becomes a single implicit category. */
+  videos?: RawContentEntry[];
 }
 
 export interface RawContentFile {

@@ -44,6 +44,16 @@ describe('pickNextVideo', () => {
     expect(lib).toContain(r21.videoId);
   });
 
+  it('recycling clears only the seen ids of THIS library, keeping other categories', () => {
+    const lib = ['a', 'b'];
+    // Everything in this library is seen, plus two ids from another category.
+    const seen = ['a', 'b', 'other1', 'other2'];
+    const r = pickNextVideo({ libraryIds: lib, seenIds: seen, cycleNumber: 1, rng: () => 0 });
+    expect(r.cycleAdvanced).toBe(true);
+    expect(r.nextSeenIds).toEqual(['other1', 'other2']);
+    expect(lib).toContain(r.videoId);
+  });
+
   it('empty library returns null videoId, does not throw or advance cycle', () => {
     const r = pickNextVideo({ libraryIds: [], seenIds: ['ghost'], cycleNumber: 3 });
     expect(r.videoId).toBeNull();

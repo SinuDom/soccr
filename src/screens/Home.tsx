@@ -9,6 +9,7 @@ import { StreakFlame } from '@/components/StreakFlame';
 import { BottomDock } from '@/components/BottomDock';
 import { ExtraTimeButton } from '@/components/ExtraTimeButton';
 import { toLocalDateString } from '@/lib/domain/streak';
+import { allVideos, dailyGoalProgress, practiceableCategories } from '@/lib/domain/categories';
 
 export function Home() {
   const nav = useNavigate();
@@ -17,13 +18,13 @@ export function Home() {
   const today = toLocalDateString(new Date());
   const doneToday = progress.lastCompletedDate === today;
   const activeUser = getUser(content, activeUserId);
-  const libSize = activeUser?.videos.length ?? 0;
+  const libSize = activeUser ? allVideos(activeUser).length : 0;
+  const categories = activeUser ? practiceableCategories(activeUser) : [];
 
-  // Daily practice progress carried by finished drill timers today. Once the
-  // goal is completed it reads as full.
-  const targetMs = content ? content.settings.sessionTargetMinutes * 60_000 : 0;
-  const dailyMs = progress.drillDay && progress.drillDay.date === today ? progress.drillDay.practiceMs : 0;
-  const dailyProgress = doneToday ? 1 : targetMs > 0 ? Math.min(1, dailyMs / targetMs) : 0;
+  // Overall daily-goal progress: every category's credited drill time today,
+  // weighted by its target, folded into ONE bar. Once the goal is completed
+  // it reads as full.
+  const dailyProgress = doneToday ? 1 : dailyGoalProgress(progress.drillDay, today, categories);
   const dailyPct = Math.round(dailyProgress * 100);
 
   useEffect(() => {
@@ -155,7 +156,7 @@ export function Home() {
 
       <footer className="mt-auto pt-8 text-center text-white/40 text-xs">
         {activeUser
-          ? `${libSize} videos for ${activeUser.name} · cycle ${progress.cycleNumber}`
+          ? `${libSize} videos in ${categories.length} categor${categories.length === 1 ? 'y' : 'ies'} for ${activeUser.name} · cycle ${progress.cycleNumber}`
           : 'Loading library…'}
       </footer>
 

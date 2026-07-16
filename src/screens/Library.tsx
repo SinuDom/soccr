@@ -1,5 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import type { VideoRef } from '@/lib/domain/types';
+import { allVideos } from '@/lib/domain/categories';
 import { useContentStore, getUser } from '@/store/contentStore';
 import { useProgressStore } from '@/store/progressStore';
 import { Button } from '@/components/Button';
@@ -15,7 +17,8 @@ export function Library() {
 
   if (!content) return null;
   const activeUser = getUser(content, activeUserId);
-  const videos = activeUser?.videos ?? [];
+  const categories = activeUser?.categories ?? [];
+  const videos = activeUser ? allVideos(activeUser) : [];
 
   return (
     <div className="min-h-dvh max-w-2xl lg:max-w-4xl mx-auto p-5 pt-8 pb-28 lg:pb-8 w-full flex flex-col">
@@ -47,48 +50,74 @@ export function Library() {
           No videos for {activeUser?.name ?? 'this user'} yet.
         </div>
       ) : (
-        <ul className="space-y-2 lg:grid lg:grid-cols-2 lg:gap-2 lg:space-y-0">
-          {videos.map((v, i) => {
-            const isSeen = seenSet.has(v.id);
-            return (
-              <motion.li
-                key={v.id}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: Math.min(i * 0.02, 0.4) }}
-                className="rounded-2xl bg-ink-800 border border-ink-700 p-4 flex items-center gap-3"
-              >
-                <PlatformBadge platform={v.platform} />
-                <div className="flex-1 min-w-0">
-                  <div className="truncate font-semibold">{v.title}</div>
-                  {v.description && (
-                    <div className="text-xs text-white/60 line-clamp-2 mt-0.5">{v.description}</div>
-                  )}
-                  <a href={v.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-white/40 max-w-full hover:text-white/70 hover:underline mt-0.5">
-                    <Icon name="external" size={12} /> <span className="truncate">{v.url}</span>
-                  </a>
-                </div>
-                {isSeen ? (
-                  <span className="inline-flex items-center gap-1 text-xs text-pitch-400"><Icon name="check" size={13} /> seen</span>
-                ) : (
-                  <span className="text-[10px] uppercase tracking-widest font-bold text-flame-400">new</span>
-                )}
-                <Button
-                  size="md"
-                  iconOnly
-                  icon="play"
-                  onClick={() => nav(`/session/extra?video=${encodeURIComponent(v.id)}&lib=1`)}
-                >
-                  Play {v.title}
-                </Button>
-              </motion.li>
-            );
-          })}
-        </ul>
+        <div className="space-y-6">
+          {categories.map((c) => (
+            <section key={c.id}>
+              {categories.length > 1 && (
+                <h2 className="mb-2 flex items-baseline justify-between gap-2">
+                  <span className="text-sm font-bold uppercase tracking-widest text-white/70">{c.name}</span>
+                  <span className="text-xs text-white/40">{c.targetMinutes} min/day · {c.videos.length} video{c.videos.length === 1 ? '' : 's'}</span>
+                </h2>
+              )}
+              <VideoList videos={c.videos} seenSet={seenSet} onPlay={(v) => nav(`/session/extra?video=${encodeURIComponent(v.id)}&lib=1`)} />
+            </section>
+          ))}
+        </div>
       )}
 
       <BottomDock />
     </div>
+  );
+}
+
+function VideoList({
+  videos,
+  seenSet,
+  onPlay,
+}: {
+  videos: VideoRef[];
+  seenSet: Set<string>;
+  onPlay: (v: VideoRef) => void;
+}) {
+  return (
+    <ul className="space-y-2 lg:grid lg:grid-cols-2 lg:gap-2 lg:space-y-0">
+      {videos.map((v, i) => {
+        const isSeen = seenSet.has(v.id);
+        return (
+          <motion.li
+            key={v.id}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: Math.min(i * 0.02, 0.4) }}
+            className="rounded-2xl bg-ink-800 border border-ink-700 p-4 flex items-center gap-3"
+          >
+            <PlatformBadge platform={v.platform} />
+            <div className="flex-1 min-w-0">
+              <div className="truncate font-semibold">{v.title}</div>
+              {v.description && (
+                <div className="text-xs text-white/60 line-clamp-2 mt-0.5">{v.description}</div>
+              )}
+              <a href={v.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-white/40 max-w-full hover:text-white/70 hover:underline mt-0.5">
+                <Icon name="external" size={12} /> <span className="truncate">{v.url}</span>
+              </a>
+            </div>
+            {isSeen ? (
+              <span className="inline-flex items-center gap-1 text-xs text-pitch-400"><Icon name="check" size={13} /> seen</span>
+            ) : (
+              <span className="text-[10px] uppercase tracking-widest font-bold text-flame-400">new</span>
+            )}
+            <Button
+              size="md"
+              iconOnly
+              icon="play"
+              onClick={() => onPlay(v)}
+            >
+              Play {v.title}
+            </Button>
+          </motion.li>
+        );
+      })}
+    </ul>
   );
 }
 

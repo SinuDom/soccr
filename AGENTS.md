@@ -21,7 +21,7 @@ ajv validate -s public/content.schema.json -d public/content.json
 If you don't have the tools installed, manually verify that:
 1. All required fields are present.
 2. Data types match the schema (e.g., integers for minutes/points, boolean for flags).
-3. The structure of `settings` and `users` (including `videos`) is preserved.
+3. The structure of `settings` and `users` (including `categories` and their `videos`) is preserved.
 4. No additional properties are added if the schema forbids them.
 
 ## Versioning

@@ -1,6 +1,9 @@
 import { Link, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useProgressStore } from '@/store/progressStore';
+import { useContentStore, getUser } from '@/store/contentStore';
+import { isCategoryComplete, practiceableCategories } from '@/lib/domain/categories';
+import { toLocalDateString } from '@/lib/domain/streak';
 import { Confetti } from '@/components/Confetti';
 import { StreakFlame } from '@/components/StreakFlame';
 import { Button } from '@/components/Button';
@@ -10,8 +13,21 @@ export function SessionComplete() {
   const mode = params.get('mode') ?? 'daily';
   const ms = Number(params.get('ms') ?? 0);
   const pts = Number(params.get('pts') ?? 0);
+  const catId = params.get('cat');
+  // `all=0` means a category finished but the daily goal isn't done yet.
+  const allDone = params.get('all') !== '0';
   const streak = useProgressStore((s) => s.progress.currentStreak);
   const points = useProgressStore((s) => s.progress.points);
+  const drillDay = useProgressStore((s) => s.progress.drillDay);
+  const activeUserId = useProgressStore((s) => s.activeUserId);
+  const content = useContentStore((s) => s.content);
+
+  const activeUser = getUser(content, activeUserId);
+  const categories = activeUser ? practiceableCategories(activeUser) : [];
+  const category = catId ? categories.find((c) => c.id === catId) ?? null : null;
+  const today = toLocalDateString(new Date());
+  const remaining = categories.filter((c) => !isCategoryComplete(drillDay, today, c));
+  const nextCategory = remaining[0] ?? null;
 
   const minutes = Math.floor(ms / 60_000);
   const seconds = Math.floor((ms % 60_000) / 1000);
@@ -26,10 +42,21 @@ export function SessionComplete() {
         className="mb-6"
       >
         {mode === 'daily' ? (
-          <>
-            <p className="uppercase tracking-widest text-pitch-400 text-sm mb-2">Daily goal complete</p>
-            <StreakFlame streak={streak} large />
-          </>
+          allDone ? (
+            <>
+              <p className="uppercase tracking-widest text-pitch-400 text-sm mb-2">Daily goal complete</p>
+              <StreakFlame streak={streak} large />
+            </>
+          ) : (
+            <>
+              <p className="uppercase tracking-widest text-pitch-400 text-sm mb-2">
+                {category ? `${category.name} complete` : 'Category complete'}
+              </p>
+              <p className="text-white/60 text-sm">
+                {remaining.length} categor{remaining.length === 1 ? 'y' : 'ies'} left to finish today's goal.
+              </p>
+            </>
+          )
         ) : (
           <p className="uppercase tracking-widest text-ice-400 text-sm">Extra time banked</p>
         )}
@@ -54,7 +81,14 @@ export function SessionComplete() {
         transition={{ delay: 0.35 }}
         className="w-full max-w-sm space-y-3"
       >
-        <Link to="/home"><Button variant="primary" size="lg" fullWidth icon="home">Home</Button></Link>
+        {mode === 'daily' && !allDone && nextCategory && (
+          <Link to={`/session/daily?cat=${encodeURIComponent(nextCategory.id)}`}>
+            <Button variant="primary" size="lg" fullWidth icon="play">Next: {nextCategory.name}</Button>
+          </Link>
+        )}
+        <Link to="/home">
+          <Button variant={mode === 'daily' && !allDone && nextCategory ? 'secondary' : 'primary'} size="lg" fullWidth icon="home">Home</Button>
+        </Link>
         <Link to="/shop"><Button variant="ghost" size="md" fullWidth icon="bag">Visit shop</Button></Link>
       </motion.div>
     </div>
