@@ -52,15 +52,8 @@
               "timer": 90
             },
             {
-              "url": "https://www.youtube.com/shorts/0j7alDnjJI0",
-              "title": "Ball 6",
-              "description": "Bent a kanapenak vagy a konyhapultnak rugjad. Legalso nem kell.",
-              "timerTitles": ["Inside - mindket lab", "2 Touch - Jobb", "2 Touch - Bal", "Instep - Mindket lab"],
-              "timer": 90
-            },
-            {
               "url": "https://www.youtube.com/shorts/1cjeU6vPj3A",
-              "title": "Ball 7",
+              "title": "Ball 6",
               "description": "Csinald az osszeset amig a timerjuk lejar",
               "timerTitles": ["Jobb lab", "Bal lab", "Ket lab - csak belso", "Ket lab - csak kulso", "Ket lab - talppal", "Ket lab - belso pofozgatas"],
               "timer": 60
