@@ -1,10 +1,10 @@
 {
   "$schema": "./content.schema.json",
   "settings": {
-    "defaultCategoryTargetMinutes": 15,
-    "pointsPerExtraMinute": 9,
-    "freezeCostPoints": 100,
-    "maxFreezesHeld": 1,
+    "defaultCategoryTargetMinutes": 6,
+    "pointsPerExtraMinute": 10,
+    "freezeCostPoints": 150,
+    "maxFreezesHeld": 14,
     "recycleWhenLibraryExhausted": true
   },
   "users": [
