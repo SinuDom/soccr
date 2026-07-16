@@ -171,14 +171,28 @@ export function SessionScreen() {
   // The session time is driven by the per-drill timers: as they count down (and
   // when they complete) they report their summed contribution, which we record
   // as the active video's practice time. In daily mode reaching the target then
-  // auto-ends the session. This makes the progress bar update live, credits the
-  // sum of all timers, and lets a reset subtract time again.
+  // auto-ends the session — but NOT while a drill timer is mid-run: the user
+  // gets told the goal is reached (banner below) and finishes the running
+  // drill; the session ends once that timer completes. This makes the progress
+  // bar update live, credits the sum of all timers, and lets a reset subtract
+  // time again.
+  const drillActiveRef = useRef(false);
   const handleDrillElapsed = useCallback((ms: number) => {
     setSession((s) => {
       if (!s) return s;
       const ns = setActiveMs(s, ms);
-      return ns.mode === 'daily' ? tickDaily(ns) : ns;
+      if (ns.mode !== 'daily') return ns;
+      return drillActiveRef.current ? ns : tickDaily(ns);
     });
+  }, []);
+
+  // Fired when a drill timer claims/releases the single running slot. When the
+  // running drill wraps up (or is reset), the held auto-end fires here.
+  const handleDrillActiveChange = useCallback((active: boolean) => {
+    drillActiveRef.current = active;
+    if (!active) {
+      setSession((s) => (s && s.mode === 'daily' ? tickDaily(s) : s));
+    }
   }, []);
 
   const handleAllDoneChange = useCallback((allDone: boolean) => {
@@ -327,6 +341,16 @@ export function SessionScreen() {
     ? (category?.name ?? 'Daily practice')
     : effectiveMode === 'manual' ? 'Manual pick' : 'Extra time';
 
+  // Goal reached while a drill timer is still running: the auto-end is held
+  // (see handleDrillElapsed), so tell the user instead of cutting the drill
+  // short. If every other category is already done, this run completes the
+  // whole daily goal — say so.
+  const goalReached = session.phase === 'practicing' && targetMs != null && totalPracticeMs(session) >= targetMs;
+  const todayISO = toLocalDateString(new Date());
+  const completesDailyGoal = goalReached && category != null
+    && categories.filter((c) => c.id !== category.id)
+      .every((c) => isCategoryComplete(progress.drillDay, todayISO, c));
+
   // Resolve the finished-timer snapshot for the active video, refreshing it
   // only when the active video changes (see finishedSnapshotRef).
   const persistDrills = effectiveMode === 'daily';
@@ -351,6 +375,26 @@ export function SessionScreen() {
         onQuit={() => setConfirmEnd(true)}
       />
 
+      {/* Goal-reached notice: the session waits for the running drill. */}
+      <AnimatePresence>
+        {goalReached && (
+          <motion.div
+            key="goal-reached"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="mt-3 shrink-0 rounded-2xl px-4 py-2.5 border text-sm bg-pitch-500/10 border-pitch-500/40 text-pitch-400"
+          >
+            <span className="inline-flex items-center gap-2">
+              <Icon name="check" size={16} />
+              {completesDailyGoal
+                ? 'Daily goal reached! Finish the running drill to wrap up.'
+                : `${category?.name ?? 'Category'} goal reached! Finish the running drill to wrap up.`}
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="mt-3 flex-1 min-h-0 flex flex-col overflow-hidden lg:mt-4 lg:block lg:overflow-visible">
         <AnimatePresence mode="wait" initial={false}>
           {session.phase === 'practicing' ? (
@@ -362,6 +406,7 @@ export function SessionScreen() {
               onStop={handleStop}
               onSkip={handleSkip}
               onDrillElapsedChange={handleDrillElapsed}
+              onDrillActiveChange={handleDrillActiveChange}
               onDrillAllDoneChange={handleAllDoneChange}
               onDrillTimerFinished={handleTimerFinished}
               onLoadError={handleLoadError}
@@ -500,6 +545,7 @@ function PracticeArea({
   onStop,
   onSkip,
   onDrillElapsedChange,
+  onDrillActiveChange,
   onDrillAllDoneChange,
   onDrillTimerFinished,
   onLoadError,
@@ -516,6 +562,7 @@ function PracticeArea({
   onStop: () => void;
   onSkip: () => void;
   onDrillElapsedChange: (elapsedMs: number) => void;
+  onDrillActiveChange: (active: boolean) => void;
   onDrillAllDoneChange: (allDone: boolean) => void;
   onDrillTimerFinished: (index: number) => void;
   onLoadError: () => void;
@@ -599,6 +646,7 @@ function PracticeArea({
             finishedIndices={finishedIndices}
             persistFinished={persistDrills}
             onElapsedChange={onDrillElapsedChange}
+            onAnyActiveChange={onDrillActiveChange}
             onAllDoneChange={onDrillAllDoneChange}
             onTimerFinished={onDrillTimerFinished}
           />

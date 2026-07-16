@@ -285,6 +285,7 @@ export function DrillTimers({
   finishedIndices,
   persistFinished = false,
   onElapsedChange,
+  onAnyActiveChange,
   onAllDoneChange,
   onTimerFinished,
 }: {
@@ -293,6 +294,12 @@ export function DrillTimers({
   finishedIndices?: number[];
   persistFinished?: boolean;
   onElapsedChange?: (elapsedMs: number) => void;
+  /**
+   * Whether ANY timer currently occupies the running slot (running or paused).
+   * Lets the parent hold the session's auto-end until the running drill
+   * completes instead of cutting it short mid-set.
+   */
+  onAnyActiveChange?: (active: boolean) => void;
   onAllDoneChange?: (allDone: boolean) => void;
   onTimerFinished?: (index: number) => void;
 }) {
@@ -304,6 +311,11 @@ export function DrillTimers({
   // Index of the timer that currently occupies the single "running" slot, or
   // null when none is active. Only that timer may run; the others are locked.
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+
+  // Report the aggregate active state upward (see onAnyActiveChange).
+  useEffect(() => {
+    onAnyActiveChange?.(activeIndex !== null);
+  }, [activeIndex, onAnyActiveChange]);
 
   // Reset the per-timer bookkeeping whenever the drill layout changes (e.g.
   // moving to another video) so stale contributions don't leak across drills.
