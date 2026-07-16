@@ -66,6 +66,8 @@ export interface Progress {
   history: HistoryEntry[];
   /** Persisted finished-drill progress for the current local day (optional). */
   drillDay?: DrillDayProgress;
+  /** Chosen profile-picture filename from the avatar collection (undefined = show initial letter). */
+  avatarIcon?: string;
 }
 
 /** Version of the inner per-user Progress object. */

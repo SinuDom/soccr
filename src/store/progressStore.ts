@@ -40,6 +40,9 @@ interface ProgressState {
   switchUser: (userId: string) => void;
   dismissNotices: () => void;
 
+  /** Set (or clear, with `null`) the chosen profile icon for any user — not just the active one. */
+  setAvatarIcon: (userId: string, icon: string | null) => void;
+
   markSeen: (videoId: string) => void;
   advanceCycle: (nextSeenIds: string[], nextCycleNumber: number) => void;
 
@@ -144,6 +147,15 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
   },
 
   dismissNotices: () => set({ freezeConsumedNotice: false, streakResetNotice: false }),
+
+  setAvatarIcon: (userId, icon) => {
+    const { vault, activeUserId } = get();
+    const current = vault.users[userId] ?? { ...DEFAULT_PROGRESS };
+    const next: Progress = { ...current, avatarIcon: icon ?? undefined };
+    const newVault: Vault = { ...vault, users: { ...vault.users, [userId]: next } };
+    persistVault(set, newVault);
+    if (userId === activeUserId) set({ progress: next });
+  },
 
   markSeen: (videoId) => {
     const p = get().progress;
