@@ -38,6 +38,16 @@ describe('migrateProgress (inner, per-user)', () => {
     expect(p.currentStreak).toBe(0);
     expect(p.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
   });
+
+  it('the chosen avatar icon survives migration from every schema version', () => {
+    // Regression: a new app version must never lose the profile icon.
+    const v0 = { currentStreak: 1, seenVideoIds: [], history: [], avatarIcon: '003-lion.png' };
+    expect(migrateProgress(v0).avatarIcon).toBe('003-lion.png');
+    const current = { schemaVersion: CURRENT_SCHEMA_VERSION, currentStreak: 1, seenVideoIds: [], history: [], avatarIcon: '007-fox.png' };
+    expect(migrateProgress(current).avatarIcon).toBe('007-fox.png');
+    const future = { schemaVersion: 99, currentStreak: 1, seenVideoIds: [], history: [], avatarIcon: '010-whale.png' };
+    expect(migrateProgress(future).avatarIcon).toBe('010-whale.png');
+  });
 });
 
 describe('migrateVault (outer, multi-user)', () => {
@@ -87,5 +97,19 @@ describe('migrateVault (outer, multi-user)', () => {
     const v = migrateVault(null);
     expect(v.activeUserId).toBe('');
     expect(v.users).toEqual({});
+  });
+
+  it('avatar icons survive a vault reload round-trip', () => {
+    const raw = {
+      vaultVersion: 2,
+      activeUserId: 'leon',
+      users: {
+        leon: { schemaVersion: 1, currentStreak: 3, seenVideoIds: [], history: [], avatarIcon: '003-lion.png' },
+        anya: { schemaVersion: 1, currentStreak: 9, seenVideoIds: [], history: [], avatarIcon: '021-hen.png' },
+      },
+    };
+    const v = migrateVault(raw);
+    expect(v.users.leon!.avatarIcon).toBe('003-lion.png');
+    expect(v.users.anya!.avatarIcon).toBe('021-hen.png');
   });
 });

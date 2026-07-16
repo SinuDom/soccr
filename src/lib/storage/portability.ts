@@ -69,6 +69,15 @@ export function mergeProgress(a: Progress, b: Progress, maxFreezes: number): Pro
   for (const h of [...a.history, ...b.history]) historyMap.set(key(h), h);
   const history = Array.from(historyMap.values()).sort((x, y) => x.startedAt - y.startedAt);
 
+  // Personalisation and same-day state must survive a merge too: the local
+  // avatar choice wins (falling back to the import's), and the fresher
+  // drill-day record (today's goal progress + extra tally) is kept — ties go
+  // to the local one.
+  const avatarIcon = a.avatarIcon ?? b.avatarIcon;
+  const drillDay = !b.drillDay ? a.drillDay
+    : !a.drillDay ? b.drillDay
+    : a.drillDay.date >= b.drillDay.date ? a.drillDay : b.drillDay;
+
   return {
     ...DEFAULT_PROGRESS,
     schemaVersion: Math.max(a.schemaVersion, b.schemaVersion),
@@ -80,6 +89,8 @@ export function mergeProgress(a: Progress, b: Progress, maxFreezes: number): Pro
     seenVideoIds: Array.from(seen),
     cycleNumber: Math.max(a.cycleNumber, b.cycleNumber),
     history,
+    ...(avatarIcon !== undefined ? { avatarIcon } : {}),
+    ...(drillDay !== undefined ? { drillDay } : {}),
   };
 }
 

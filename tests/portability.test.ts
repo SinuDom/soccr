@@ -91,6 +91,26 @@ describe('mergeProgress', () => {
     const b = makeP({ lastCompletedDate: '2026-07-14' });
     expect(mergeProgress(a, b, 1).lastCompletedDate).toBe('2026-07-14');
   });
+
+  it('keeps the avatar icon — local wins, import fills a gap', () => {
+    // Regression: a merge-import must never wipe the chosen profile icon.
+    const local = makeP({ avatarIcon: '003-lion.png' });
+    const imported = makeP({ avatarIcon: '007-fox.png' });
+    expect(mergeProgress(local, imported, 1).avatarIcon).toBe('003-lion.png');
+    expect(mergeProgress(makeP(), imported, 1).avatarIcon).toBe('007-fox.png');
+    expect(mergeProgress(local, makeP(), 1).avatarIcon).toBe('003-lion.png');
+    expect(mergeProgress(makeP(), makeP(), 1).avatarIcon).toBeUndefined();
+  });
+
+  it('keeps the fresher drill day (ties go to local)', () => {
+    const older = { date: '2026-07-14', practiceMs: 60_000, finished: { a: [0] } };
+    const newer = { date: '2026-07-15', practiceMs: 30_000, finished: { b: [0] }, completedCategories: ['ball'], extraMs: 5_000 };
+    expect(mergeProgress(makeP({ drillDay: older }), makeP({ drillDay: newer }), 1).drillDay).toEqual(newer);
+    expect(mergeProgress(makeP({ drillDay: newer }), makeP({ drillDay: older }), 1).drillDay).toEqual(newer);
+    const localToday = { ...newer, practiceMs: 90_000 };
+    expect(mergeProgress(makeP({ drillDay: localToday }), makeP({ drillDay: newer }), 1).drillDay).toEqual(localToday);
+    expect(mergeProgress(makeP(), makeP({ drillDay: newer }), 1).drillDay).toEqual(newer);
+  });
 });
 
 describe('mergeVault', () => {
