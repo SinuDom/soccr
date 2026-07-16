@@ -37,6 +37,13 @@
           "description": "A 'Double L-Drags' gyakorlat nem kell.",
           "timerTitles": ["Instep-Outstep Jobb", "Instep-Outstep Bal", "L-Drag"],
           "timer": 90
+        },
+        {
+          "url": "https://www.youtube.com/watch?v=2s9Vy5UlTac",
+          "title": "Ball 4",
+          "description": "Osszes gyakorlat",
+          "timerTitles": ["One", "Two", "Three", "Four Jobb", "Four Bal", "Five"],
+          "timer": 90
         }
       ]
     },
