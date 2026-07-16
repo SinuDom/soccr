@@ -15,9 +15,7 @@ export interface RawContentEntry {
 
 export interface RawContentSettings {
   /** Default daily target for categories without their own targetMinutes. */
-  defaultCategoryTargetMinutes?: number;
-  /** Legacy name for defaultCategoryTargetMinutes; still accepted. */
-  sessionTargetMinutes?: number;
+  defaultCategoryTargetMinutes: number;
   pointsPerExtraMinute: number;
   freezeCostPoints: number;
   maxFreezesHeld: number;

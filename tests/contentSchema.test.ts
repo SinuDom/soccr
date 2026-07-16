@@ -111,29 +111,18 @@ describe('validateContent — categories', () => {
     expect(r.ok).toBe(true);
   });
 
-  it('accepts the legacy settings.sessionTargetMinutes name as the default target', () => {
+  it('rejects the removed legacy sessionTargetMinutes name', () => {
     const { defaultCategoryTargetMinutes: _renamed, ...rest } = SETTINGS;
     const r = validateContent({
       settings: { ...rest, sessionTargetMinutes: 20 },
       users: [{ name: 'X', categories: [{ name: 'Ball', videos: [vid('a')] }] }],
     });
-    expect(r.ok).toBe(true);
-    if (!r.ok) return;
-    expect(r.content.settings.defaultCategoryTargetMinutes).toBe(20);
-    expect(r.content.users[0]!.categories[0]!.targetMinutes).toBe(20);
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.message).toMatch(/defaultCategoryTargetMinutes/);
   });
 
-  it('prefers defaultCategoryTargetMinutes over the legacy name when both are present', () => {
-    const r = validateContent({
-      settings: { ...SETTINGS, sessionTargetMinutes: 99 },
-      users: [{ name: 'X', categories: [{ name: 'Ball', videos: [vid('a')] }] }],
-    });
-    expect(r.ok).toBe(true);
-    if (!r.ok) return;
-    expect(r.content.settings.defaultCategoryTargetMinutes).toBe(15);
-  });
-
-  it('rejects settings without any default target name', () => {
+  it('rejects settings without defaultCategoryTargetMinutes', () => {
     const { defaultCategoryTargetMinutes: _renamed, ...rest } = SETTINGS;
     const r = validateContent({
       settings: rest,

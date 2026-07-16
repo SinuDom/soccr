@@ -31,7 +31,7 @@ export function validateContent(raw: unknown): ValidationResult {
   const s = obj.settings;
   if (!s || typeof s !== 'object') return { ok: false, message: 'Missing "settings" object.' };
   const requiredNums: string[] = [
-    'pointsPerExtraMinute', 'freezeCostPoints', 'maxFreezesHeld',
+    'defaultCategoryTargetMinutes', 'pointsPerExtraMinute', 'freezeCostPoints', 'maxFreezesHeld',
   ];
   for (const k of requiredNums) {
     const v = (s as unknown as Record<string, unknown>)[k];
@@ -39,12 +39,7 @@ export function validateContent(raw: unknown): ValidationResult {
       return { ok: false, message: `settings.${k} must be a non-negative number.` };
     }
   }
-  // The default per-category target; the legacy name sessionTargetMinutes is
-  // still accepted so older content files keep loading.
-  const defaultTargetMinutes = s.defaultCategoryTargetMinutes ?? s.sessionTargetMinutes;
-  if (typeof defaultTargetMinutes !== 'number' || !Number.isFinite(defaultTargetMinutes) || defaultTargetMinutes < 0) {
-    return { ok: false, message: 'settings.defaultCategoryTargetMinutes must be a non-negative number.' };
-  }
+  const defaultTargetMinutes = s.defaultCategoryTargetMinutes;
   if (typeof s.recycleWhenLibraryExhausted !== 'boolean') {
     return { ok: false, message: 'settings.recycleWhenLibraryExhausted must be true or false.' };
   }

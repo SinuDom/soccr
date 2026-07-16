@@ -107,7 +107,7 @@ Edit the number in `settings`. All settings are read at runtime — no code chan
 
 | Setting | Meaning |
 |---|---|
-| `defaultCategoryTargetMinutes` | Default per-category daily target (in minutes); only used by categories without their own `targetMinutes` (legacy name `sessionTargetMinutes` still accepted) |
+| `defaultCategoryTargetMinutes` | Default per-category daily target (in minutes); only used by categories without their own `targetMinutes` |
 | `pointsPerExtraMinute` | Points earned per minute of Extra Time practice |
 | `freezeCostPoints` | Cost of one streak freeze in the shop |
 | `maxFreezesHeld` | Cap on freezes on hand at once (the shop disables Buy at cap) |
