@@ -99,7 +99,7 @@ function ProfileTile({
           whileHover={{ scale: 1.06 }}
           whileTap={{ scale: 0.96 }}
           className={[
-            'group grid place-items-center overflow-hidden rounded-full font-black text-ink-950',
+            'group grid place-items-center overflow-hidden rounded-3xl font-black text-ink-950',
             'h-28 w-28 sm:h-36 sm:w-36 text-5xl sm:text-6xl',
             'bg-pitch-500 transition-shadow duration-150',
             'ring-4 ring-transparent hover:ring-pitch-400 focus-visible:outline-none focus-visible:ring-pitch-400',
