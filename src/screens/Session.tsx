@@ -441,7 +441,6 @@ export function SessionScreen() {
               activeVideo={activeVideo}
               libraryMode={libraryMode}
               finishedIndices={finishedIndices}
-              persistDrills={persistDrills}
             />
           ) : null}
         </AnimatePresence>
@@ -582,7 +581,6 @@ function PracticeArea({
   activeVideo,
   libraryMode,
   finishedIndices,
-  persistDrills,
 }: {
   session: Session;
   targetMs: number | null;
@@ -599,7 +597,6 @@ function PracticeArea({
   activeVideo: VideoRef;
   libraryMode: boolean;
   finishedIndices: number[];
-  persistDrills: boolean;
 }) {
   const total = totalPracticeMs(session);
   // Vertical Shorts get a narrower, portrait-friendly column so they don't sit
@@ -672,7 +669,6 @@ function PracticeArea({
             seconds={activeVideo.timer}
             titles={activeVideo.timerTitles}
             finishedIndices={finishedIndices}
-            persistFinished={persistDrills}
             onElapsedChange={onDrillElapsedChange}
             onAnyActiveChange={onDrillActiveChange}
             onAllDoneChange={onDrillAllDoneChange}

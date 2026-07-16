@@ -33,18 +33,12 @@ interface Props {
   size?: number;
   /**
    * This timer was already finished earlier today (its time is persisted and
-   * already counted in the session baseline). It starts in the "done" state and
-   * contributes 0 live so it is not double-counted, letting the user continue
-   * the drill where they left off.
+   * already counted in the session baseline). It starts in the "done" state
+   * and only reruns contribute live, so it is not double-counted, letting the
+   * user continue the drill where they left off.
    */
   preCounted?: boolean;
-  /**
-   * When true (daily mode), finishing this timer credits its time permanently
-   * for the day: it stays counted even if reset afterwards, and `onFinished`
-   * fires so the parent can persist it.
-   */
-  persistFinished?: boolean;
-  /** Fired once whenever this timer reaches zero (used to persist the finish). */
+  /** Fired whenever this timer reaches zero (used to persist the finish). */
   onFinished?: () => void;
 }
 
@@ -54,11 +48,14 @@ interface Props {
  * much time is left. It can be paused/resumed while running and, when it
  * reaches zero, flips to a "done" state and can be run again.
  */
-export function DrillTimer({ seconds, index, label: customLabel, onChange, onActiveChange, locked = false, size = 132, preCounted = false, persistFinished = false, onFinished }: Props) {
+export function DrillTimer({ seconds, index, label: customLabel, onChange, onActiveChange, locked = false, size = 132, preCounted = false, onFinished }: Props) {
   const totalMs = Math.max(1, Math.round(seconds * 1000));
   const [phase, setPhase] = useState<Phase>(preCounted ? 'done' : 'idle');
   const [remainingMs, setRemainingMs] = useState(preCounted ? 0 : totalMs);
   const [completedOnce, setCompletedOnce] = useState(preCounted);
+  // Runs completed DURING this session. A preCounted timer starts at 0: its
+  // earlier completion is already in the session baseline, so only reruns add.
+  const [runsCompleted, setRunsCompleted] = useState(0);
   const [lockFlash, setLockFlash] = useState(false);
   const endAtRef = useRef<number>(0);
   const onFinishedRef = useRef(onFinished);
@@ -76,6 +73,7 @@ export function DrillTimer({ seconds, index, label: customLabel, onChange, onAct
       setRemainingMs(totalMs);
       setCompletedOnce(false);
     }
+    setRunsCompleted(0);
   }, [totalMs, preCounted]);
 
   // Report whether this timer currently occupies the single "running" slot so
@@ -95,24 +93,16 @@ export function DrillTimer({ seconds, index, label: customLabel, onChange, onAct
     if (!locked) setLockFlash(false);
   }, [locked]);
 
-  // Report this timer's contribution to the session. Idle/reset contributes
-  // nothing; running/paused contributes the elapsed portion; done contributes
-  // the full duration. This drives the live session progress bar and lets a
-  // reset subtract its time again.
+  // Report this timer's contribution to the session: every run completed
+  // during this session stays credited, and a running/paused (re)run adds its
+  // elapsed portion on top — so repeating a drill keeps adding practice time.
+  // Resetting mid-run subtracts only that partial run. A preCounted timer's
+  // earlier completion lives in the session baseline, not here.
   useEffect(() => {
-    let elapsed: number;
-    if (preCounted) {
-      // Already counted in the session baseline; never contribute live again.
-      elapsed = 0;
-    } else if (persistFinished && completedOnce) {
-      // Daily mode: once finished, the time is credited for the day and stays
-      // counted even if the user resets to redo the exercise.
-      elapsed = totalMs;
-    } else {
-      elapsed = phase === 'idle' ? 0 : totalMs - remainingMs;
-    }
-    onChange?.(Math.max(0, elapsed), completedOnce);
-  }, [remainingMs, phase, completedOnce, totalMs, onChange, preCounted, persistFinished]);
+    const completedMs = runsCompleted * totalMs;
+    const live = phase === 'running' || phase === 'paused' ? totalMs - remainingMs : 0;
+    onChange?.(Math.max(0, completedMs + live), completedOnce);
+  }, [remainingMs, phase, completedOnce, runsCompleted, totalMs, onChange]);
 
   useEffect(() => {
     if (phase !== 'running') return;
@@ -123,6 +113,7 @@ export function DrillTimer({ seconds, index, label: customLabel, onChange, onAct
         setRemainingMs(0);
         setPhase('done');
         setCompletedOnce(true);
+        setRunsCompleted((n) => n + 1); // fold the finished run into the credited total
         playFinishedChime();
         onFinishedRef.current?.();
         return;
@@ -287,7 +278,6 @@ export function DrillTimers({
   seconds,
   titles,
   finishedIndices,
-  persistFinished = false,
   onElapsedChange,
   onAnyActiveChange,
   onAllDoneChange,
@@ -296,7 +286,6 @@ export function DrillTimers({
   seconds?: number;
   titles?: string[];
   finishedIndices?: number[];
-  persistFinished?: boolean;
   onElapsedChange?: (elapsedMs: number) => void;
   /**
    * Whether ANY timer currently occupies the running slot (running or paused).
@@ -381,7 +370,6 @@ export function DrillTimers({
             size={ringSize}
             locked={activeIndex !== null && activeIndex !== i}
             preCounted={preset.includes(i)}
-            persistFinished={persistFinished}
             onFinished={() => onTimerFinished?.(i)}
             onActiveChange={(active) => handleChildActive(i, active)}
             onChange={(elapsedMs, completedOnce) => handleChildChange(i, elapsedMs, completedOnce)}
