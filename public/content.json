@@ -21,7 +21,7 @@
         {
           "url": "https://www.youtube.com/shorts/_eraYN00_Vg",
           "title": "Speed 1",
-          "description": "A palyat bolyakkal csinald. Ismeteld meg 3x kis szunettel",
+          "description": "A palyat bolyakkal csinald. Kis szunetet tarts es csinald 2 percig osszesen",
           "timer": 120
         },
         {
@@ -29,7 +29,14 @@
           "title": "Ball 2",
           "description": "Mind a 3 gyakorlatot 2 percig.",
           "timerTitles": ["Lab kozott passz", "Huzogatni", "Belulrol kifele"],
-          "timer": 120
+          "timer": 90
+        },
+        {
+          "url": "https://www.youtube.com/watch?v=2s9Vy5UlTac",
+          "title": "Ball 3",
+          "description": "A 'Double L-Drags' gyakorlat nem kell.",
+          "timerTitles": ["Instep-Outstep Jobb", "Instep-Outstep Bal", "L-Drag"],
+          "timer": 90
         }
       ]
     },
