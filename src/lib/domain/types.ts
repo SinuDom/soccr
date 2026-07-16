@@ -33,8 +33,9 @@ export interface Settings {
   /**
    * Default per-category daily target, in minutes. Categories without their
    * own targetMinutes (and legacy flat video lists) fall back to this.
+   * (content.json may still spell it with the legacy name sessionTargetMinutes.)
    */
-  sessionTargetMinutes: number;
+  defaultCategoryTargetMinutes: number;
   pointsPerExtraMinute: number;
   freezeCostPoints: number;
   maxFreezesHeld: number;

@@ -57,7 +57,7 @@ Each user's videos are grouped into **categories**, and each category carries it
 ```json
 {
   "settings": {
-    "sessionTargetMinutes": 20,
+    "defaultCategoryTargetMinutes": 20,
     "pointsPerExtraMinute": 10,
     "freezeCostPoints": 100,
     "maxFreezesHeld": 1,
@@ -89,7 +89,7 @@ Each user's videos are grouped into **categories**, and each category carries it
 }
 ```
 
-`id` is optional (defaults to a slug of the category name — keep it stable once set) and `targetMinutes` is optional (defaults to `settings.sessionTargetMinutes`). A user may instead carry a legacy flat `videos` array, which behaves as a single category targeting `settings.sessionTargetMinutes`.
+`id` is optional (defaults to a slug of the category name — keep it stable once set) and `targetMinutes` is optional (defaults to `settings.defaultCategoryTargetMinutes`). A user may instead carry a legacy flat `videos` array, which behaves as a single category targeting `settings.defaultCategoryTargetMinutes`.
 
 ### To add a video
 
@@ -107,7 +107,7 @@ Edit the number in `settings`. All settings are read at runtime — no code chan
 
 | Setting | Meaning |
 |---|---|
-| `sessionTargetMinutes` | Default per-category daily target (in minutes) for categories without their own `targetMinutes` |
+| `defaultCategoryTargetMinutes` | Default per-category daily target (in minutes); only used by categories without their own `targetMinutes` (legacy name `sessionTargetMinutes` still accepted) |
 | `pointsPerExtraMinute` | Points earned per minute of Extra Time practice |
 | `freezeCostPoints` | Cost of one streak freeze in the shop |
 | `maxFreezesHeld` | Cap on freezes on hand at once (the shop disables Buy at cap) |

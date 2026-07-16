@@ -3,7 +3,7 @@ import { DEFAULT_PROGRESS, type Progress, type Settings } from '@/lib/domain/typ
 import { applyDailyCompletion, awardPoints, buyFreeze, daysBetween, evaluateOnLaunch } from '@/lib/domain/streak';
 
 const settings: Settings = {
-  sessionTargetMinutes: 20,
+  defaultCategoryTargetMinutes: 20,
   pointsPerExtraMinute: 10,
   freezeCostPoints: 100,
   maxFreezesHeld: 1,

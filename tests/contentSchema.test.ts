@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { validateContent } from '@/lib/content/schema';
 
 const SETTINGS = {
-  sessionTargetMinutes: 15,
+  defaultCategoryTargetMinutes: 15,
   pointsPerExtraMinute: 9,
   freezeCostPoints: 100,
   maxFreezesHeld: 1,
@@ -29,7 +29,7 @@ describe('validateContent — categories', () => {
     expect(u.categories.map((c) => c.id)).toEqual(['ball', 'speed']);
     expect(u.categories[0]!.targetMinutes).toBe(10);
     expect(u.categories[0]!.videos).toHaveLength(2);
-    // Missing targetMinutes falls back to settings.sessionTargetMinutes.
+    // Missing targetMinutes falls back to settings.defaultCategoryTargetMinutes.
     expect(u.categories[1]!.name).toBe('Speed');
     expect(u.categories[1]!.targetMinutes).toBe(15);
   });
@@ -109,6 +109,39 @@ describe('validateContent — categories', () => {
       ],
     });
     expect(r.ok).toBe(true);
+  });
+
+  it('accepts the legacy settings.sessionTargetMinutes name as the default target', () => {
+    const { defaultCategoryTargetMinutes: _renamed, ...rest } = SETTINGS;
+    const r = validateContent({
+      settings: { ...rest, sessionTargetMinutes: 20 },
+      users: [{ name: 'X', categories: [{ name: 'Ball', videos: [vid('a')] }] }],
+    });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.content.settings.defaultCategoryTargetMinutes).toBe(20);
+    expect(r.content.users[0]!.categories[0]!.targetMinutes).toBe(20);
+  });
+
+  it('prefers defaultCategoryTargetMinutes over the legacy name when both are present', () => {
+    const r = validateContent({
+      settings: { ...SETTINGS, sessionTargetMinutes: 99 },
+      users: [{ name: 'X', categories: [{ name: 'Ball', videos: [vid('a')] }] }],
+    });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.content.settings.defaultCategoryTargetMinutes).toBe(15);
+  });
+
+  it('rejects settings without any default target name', () => {
+    const { defaultCategoryTargetMinutes: _renamed, ...rest } = SETTINGS;
+    const r = validateContent({
+      settings: rest,
+      users: [{ name: 'X', categories: [{ name: 'Ball', videos: [vid('a')] }] }],
+    });
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.message).toMatch(/defaultCategoryTargetMinutes/);
   });
 
   it('rejects non-positive or fractional targetMinutes', () => {

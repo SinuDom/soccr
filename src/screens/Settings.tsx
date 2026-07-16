@@ -110,7 +110,7 @@ export function Settings() {
       <Section title="Content settings (from content.json)">
         {content ? (
           <dl className="grid grid-cols-2 gap-2 text-sm">
-            <SettingRow label="Default session target" value={`${content.settings.sessionTargetMinutes} min`} />
+            <SettingRow label="Default category target" value={`${content.settings.defaultCategoryTargetMinutes} min`} />
             <SettingRow label="Points / extra minute" value={content.settings.pointsPerExtraMinute} />
             <SettingRow label="Freeze cost" value={`${content.settings.freezeCostPoints} pts`} />
             <SettingRow label="Max freezes held" value={content.settings.maxFreezesHeld} />

@@ -13,11 +13,22 @@ export interface RawContentEntry {
   timer?: number;
 }
 
+export interface RawContentSettings {
+  /** Default daily target for categories without their own targetMinutes. */
+  defaultCategoryTargetMinutes?: number;
+  /** Legacy name for defaultCategoryTargetMinutes; still accepted. */
+  sessionTargetMinutes?: number;
+  pointsPerExtraMinute: number;
+  freezeCostPoints: number;
+  maxFreezesHeld: number;
+  recycleWhenLibraryExhausted: boolean;
+}
+
 export interface RawContentCategory {
   /** Stable id; defaults to a slug of the name. */
   id?: string;
   name: string;
-  /** Daily practice target in minutes; defaults to settings.sessionTargetMinutes. */
+  /** Daily practice target in minutes; defaults to settings.defaultCategoryTargetMinutes. */
   targetMinutes?: number;
   videos: RawContentEntry[];
 }
@@ -31,7 +42,7 @@ export interface RawContentUser {
 }
 
 export interface RawContentFile {
-  settings: Settings;
+  settings: RawContentSettings;
   users?: RawContentUser[];
   /** Legacy top-level list (single-user); still accepted. */
   videos?: RawContentEntry[];

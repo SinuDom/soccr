@@ -31,13 +31,19 @@ export function validateContent(raw: unknown): ValidationResult {
   const s = obj.settings;
   if (!s || typeof s !== 'object') return { ok: false, message: 'Missing "settings" object.' };
   const requiredNums: string[] = [
-    'sessionTargetMinutes', 'pointsPerExtraMinute', 'freezeCostPoints', 'maxFreezesHeld',
+    'pointsPerExtraMinute', 'freezeCostPoints', 'maxFreezesHeld',
   ];
   for (const k of requiredNums) {
     const v = (s as unknown as Record<string, unknown>)[k];
     if (typeof v !== 'number' || !Number.isFinite(v) || v < 0) {
       return { ok: false, message: `settings.${k} must be a non-negative number.` };
     }
+  }
+  // The default per-category target; the legacy name sessionTargetMinutes is
+  // still accepted so older content files keep loading.
+  const defaultTargetMinutes = s.defaultCategoryTargetMinutes ?? s.sessionTargetMinutes;
+  if (typeof defaultTargetMinutes !== 'number' || !Number.isFinite(defaultTargetMinutes) || defaultTargetMinutes < 0) {
+    return { ok: false, message: 'settings.defaultCategoryTargetMinutes must be a non-negative number.' };
   }
   if (typeof s.recycleWhenLibraryExhausted !== 'boolean') {
     return { ok: false, message: 'settings.recycleWhenLibraryExhausted must be true or false.' };
@@ -59,14 +65,14 @@ export function validateContent(raw: unknown): ValidationResult {
         return {
           id,
           name: (u as any).name.trim(),
-          categories: parseCategories(u, s.sessionTargetMinutes, `users[${i}]`),
+          categories: parseCategories(u, defaultTargetMinutes, `users[${i}]`),
         };
       });
     } else if (Array.isArray(obj.videos)) {
       users = [{
         id: 'everyone',
         name: 'Everyone',
-        categories: [implicitCategory(parseVideos(obj.videos, 'videos'), s.sessionTargetMinutes)],
+        categories: [implicitCategory(parseVideos(obj.videos, 'videos'), defaultTargetMinutes)],
       }];
     } else {
       return { ok: false, message: 'Missing "users" array (or legacy "videos" array).' };
@@ -79,7 +85,7 @@ export function validateContent(raw: unknown): ValidationResult {
     ok: true,
     content: {
       settings: {
-        sessionTargetMinutes: s.sessionTargetMinutes,
+        defaultCategoryTargetMinutes: defaultTargetMinutes,
         pointsPerExtraMinute: s.pointsPerExtraMinute,
         freezeCostPoints: s.freezeCostPoints,
         maxFreezesHeld: s.maxFreezesHeld,
@@ -97,7 +103,7 @@ function implicitCategory(videos: VideoRef[], defaultTargetMinutes: number): Cat
 
 /**
  * Parse one user's library: either categories[] (each with an optional
- * per-category daily target falling back to settings.sessionTargetMinutes) or
+ * per-category daily target falling back to settings.defaultCategoryTargetMinutes) or
  * a legacy flat videos[] that becomes one implicit category. Video URLs must
  * be unique across the WHOLE user, not just within a category.
  */

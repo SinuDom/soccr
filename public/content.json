@@ -1,7 +1,7 @@
 {
   "$schema": "./content.schema.json",
   "settings": {
-    "sessionTargetMinutes": 15,
+    "defaultCategoryTargetMinutes": 15,
     "pointsPerExtraMinute": 9,
     "freezeCostPoints": 100,
     "maxFreezesHeld": 1,

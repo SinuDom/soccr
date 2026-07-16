@@ -33,17 +33,25 @@
     "settings": {
       "type": "object",
       "required": [
-        "sessionTargetMinutes",
         "pointsPerExtraMinute",
         "freezeCostPoints",
         "maxFreezesHeld",
         "recycleWhenLibraryExhausted"
       ],
+      "anyOf": [
+        { "required": ["defaultCategoryTargetMinutes"] },
+        { "required": ["sessionTargetMinutes"] }
+      ],
       "properties": {
+        "defaultCategoryTargetMinutes": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Default per-category daily target, in minutes. Only used by categories without their own targetMinutes (and legacy flat video lists)."
+        },
         "sessionTargetMinutes": {
           "type": "integer",
           "minimum": 1,
-          "description": "Default per-category daily target, in minutes. Categories without their own targetMinutes (and legacy flat video lists) fall back to this."
+          "description": "DEPRECATED legacy name for defaultCategoryTargetMinutes; still accepted."
         },
         "pointsPerExtraMinute": { "type": "integer", "minimum": 0 },
         "freezeCostPoints": { "type": "integer", "minimum": 0 },
@@ -79,7 +87,7 @@
                 "targetMinutes": {
                   "type": "integer",
                   "minimum": 1,
-                  "description": "Daily practice target for this category, in minutes; defaults to settings.sessionTargetMinutes."
+                  "description": "Daily practice target for this category, in minutes; defaults to settings.defaultCategoryTargetMinutes."
                 },
                 "videos": { "$ref": "#/definitions/videos" }
               },
@@ -88,7 +96,7 @@
           },
           "videos": {
             "$ref": "#/definitions/videos",
-            "description": "Legacy flat list — becomes a single implicit category targeting settings.sessionTargetMinutes."
+            "description": "Legacy flat list — becomes a single implicit category targeting settings.defaultCategoryTargetMinutes."
           }
         },
         "additionalProperties": false
