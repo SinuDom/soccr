@@ -14,14 +14,14 @@
         {
           "id": "ball",
           "name": "Ball control",
-          "targetMinutes": 1,
+          "targetMinutes": 6,
           "videos": [
             {
               "url": "https://www.youtube.com/shorts/--llBGWd4JA",
               "title": "Ball 1",
               "description": "Csinald mind a 3 gyakorlatot 2 percig.",
               "timerTitles": ["Jobb", "Ball", "Mindketto"],
-              "timer": 120
+              "timer": 90
             },
             {
               "url": "https://www.youtube.com/shorts/V4Q4H7CXomM",
@@ -42,6 +42,69 @@
               "title": "Ball 4",
               "description": "Osszes gyakorlat",
               "timerTitles": ["One", "Two", "Three", "Four Jobb", "Four Bal", "Five"],
+              "timer": 60
+            },
+            {
+              "url": "https://www.youtube.com/shorts/0j7alDnjJI0",
+              "title": "Ball 5",
+              "description": "Bent a kanapenak vagy a konyhapultnak rugjad. Legalso nem kell.",
+              "timerTitles": ["Inside - mindket lab", "2 Touch - Jobb", "2 Touch - Bal", "Instep - Mindket lab"],
+              "timer": 90
+            },
+            {
+              "url": "https://www.youtube.com/shorts/0j7alDnjJI0",
+              "title": "Ball 6",
+              "description": "Bent a kanapenak vagy a konyhapultnak rugjad. Legalso nem kell.",
+              "timerTitles": ["Inside - mindket lab", "2 Touch - Jobb", "2 Touch - Bal", "Instep - Mindket lab"],
+              "timer": 90
+            },
+            {
+              "url": "https://www.youtube.com/shorts/1cjeU6vPj3A",
+              "title": "Ball 7",
+              "description": "Csinald az osszeset amig a timerjuk lejar",
+              "timerTitles": ["Jobb lab", "Bal lab", "Ket lab - csak belso", "Ket lab - csak kulso", "Ket lab - talppal", "Ket lab - belso pofozgatas"],
+              "timer": 60
+            }
+          ]
+        },
+        {
+          "id": "dribble",
+          "name": "Dribble",
+          "targetMinutes": 3,
+          "videos": [
+            {
+              "url": "https://www.youtube.com/shorts/IBgJqleS9iE",
+              "title": "Ronaldo",
+              "description": "Csak az 1-est 2-est es az 5-ost csinald.",
+              "timerTitles": ["Drill 1", "Drill 2", "Drill 5"],
+              "timer": 60
+            },
+            {
+              "url": "https://www.youtube.com/shorts/iIP5yy5Yz1M",
+              "title": "Messi La Croqueta",
+              "description": "Mindket iranyba! Figyelj hogy csinald meg a testcselt elotte ahogy a videon mutatja!",
+              "timerTitles": ["Jobbra", "Balra"],
+              "timer": 90
+            },
+            {
+              "url": "https://www.youtube.com/shorts/4ZNXhC2PKYI",
+              "title": "Neymar",
+              "description": "Mindket labbal! Bolya legyen az ellenfel",
+              "timerTitles": ["Jobb", "Bal"],
+              "timer": 90
+            },
+            {
+              "url": "https://www.youtube.com/shorts/FIxCprBdBrc",
+              "title": "Messi testcsel",
+              "description": "Mindket labbal! Egy picit guruljon a labda az elejen. Figyelj, hogy mozogjon a teljes tested a testcselnel!",
+              "timerTitles": ["Jobb", "Bal"],
+              "timer": 90
+            },
+            {
+              "url": "https://www.youtube.com/shorts/5SWvKketzNA",
+              "title": "La Croqueta",
+              "description": "Mindket iranyba! Nezd mekkorat megy oldalra. Probalj te is nagyot menni.",
+              "timerTitles": ["Jobbra", "Balra"],
               "timer": 90
             }
           ]
@@ -49,12 +112,102 @@
         {
           "id": "speedandagility",
           "name": "Speed & Agility",
-          "targetMinutes": 1,
+          "targetMinutes": 6,
           "videos": [
             {
               "url": "https://www.youtube.com/shorts/_eraYN00_Vg",
               "title": "Speed 1",
-              "description": "A palyat bolyakkal csinald. Kis szunetet tarts es csinald 2 percig osszesen",
+              "description": "A palyat bolyakkal csinald. Kis szunet, es amig a timer lejar",
+              "timer": 120
+            },
+            {
+              "url": "https://www.youtube.com/shorts/Q02e124l19s",
+              "title": "Speed 2",
+              "description": "A palyat bolyakkal csinald. Kis szunet, es amig a timer lejar",
+              "timer": 120
+            },
+            {
+              "url": "https://www.youtube.com/shorts/tU5KPmmNe6M",
+              "title": "Speed 3",
+              "description": "A ruggas nem kell a vegen. Kis szunet, es amig a timer lejar",
+              "timer": 120
+            },
+            {
+              "url": "https://www.youtube.com/shorts/XWmJFrIhH0E",
+              "title": "Speed 4",
+              "description": "Kis szunet, es amig a timer lejar",
+              "timer": 120
+            },
+            {
+              "url": "https://www.youtube.com/shorts/yqGcqflk2zs",
+              "title": "Speed 5",
+              "description": "Kis szunet, es amig a timer lejar",
+              "timer": 120
+            },
+            {
+              "url": "https://www.youtube.com/shorts/Yqj2hOsApwI",
+              "title": "Speed 6",
+              "description": "A 2 rud utan fuss vissza a letra mellett. Kis szunet, es amig a timer lejar",
+              "timer": 120
+            },
+            {
+              "url": "https://www.youtube.com/shorts/kFYkCvNtU9s",
+              "title": "Speed 7",
+              "description": "Allva indulj es bolyakat hasznalj. Kis szunet es visszafele a masik labbal",
+              "timer": 120
+            },
+            {
+              "url": "https://www.youtube.com/shorts/qw3r7cZo4GA",
+              "title": "Speed 8",
+              "description": "Amig a timer lejar",
+              "timer": 120
+            },
+            {
+              "url": "https://www.youtube.com/shorts/zompUGXwAvc",
+              "title": "Speed 9",
+              "description": "A labda a vegen nem kell es hasznald a letrat a sarga cucc helyett.",
+              "timer": 120
+            },
+            {
+              "url": "https://www.youtube.com/shorts/f_V3O_ya0-4",
+              "title": "Speed 10",
+              "description": "A hatrafutast a bolyak mellett visszafele csinald.",
+              "timer": 120
+            },
+            {
+              "url": "https://www.youtube.com/shorts/6fQkUW2W6I0",
+              "title": "Speed 11",
+              "description": "Kishaz es a kukak kozott epitsd fel",
+              "timer": 120
+            },
+            {
+              "url": "https://www.youtube.com/shorts/6fQkUW2W6I0",
+              "title": "Speed 12",
+              "description": "Kishaz es a kukak kozott epitsd fel",
+              "timer": 120
+            },
+            {
+              "url": "https://www.youtube.com/shorts/nog-jx96wZI",
+              "title": "Speed 13",
+              "description": "Letrat hasznalj az elejen es a nagy ugras utan 5 meterf fussal csak.",
+              "timer": 120
+            },
+            {
+              "url": "https://www.youtube.com/shorts/hf8IWhf8ndo",
+              "title": "Speed 14",
+              "description": "Bolyakkal jelold ki.",
+              "timer": 120
+            },
+            {
+              "url": "https://www.youtube.com/shorts/AOEkR7DoE-E",
+              "title": "Speed 15",
+              "description": "Bolyakkal jelold ki.",
+              "timer": 120
+            },
+            {
+              "url": "https://www.youtube.com/shorts/1E5tu5uyATY",
+              "title": "Speed 16",
+              "description": "Bolyakkal jelold ki es kepzeld oda a vonalat. Osszesen addig csinald amig a timer lejar. Pihenj kozben ha kell.",
               "timer": 120
             }
           ]
