@@ -14,7 +14,7 @@
         {
           "id": "ball",
           "name": "Ball control",
-          "targetMinutes": 10,
+          "targetMinutes": 7,
           "videos": [
             {
               "url": "https://www.youtube.com/shorts/--llBGWd4JA",
@@ -47,9 +47,9 @@
           ]
         },
         {
-          "id": "speed",
-          "name": "Speed",
-          "targetMinutes": 2,
+          "id": "speedandagility",
+          "name": "Speed & Agility",
+          "targetMinutes": 7,
           "videos": [
             {
               "url": "https://www.youtube.com/shorts/_eraYN00_Vg",
