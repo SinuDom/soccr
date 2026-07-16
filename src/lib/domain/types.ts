@@ -70,6 +70,11 @@ export interface DrillDayProgress {
    * Optional so drill days persisted by older builds keep loading.
    */
   completedCategories?: string[];
+  /**
+   * Practice time today beyond the goals: sessions on already-completed
+   * categories plus goal-session overshoot. Shown on Home; resets with the day.
+   */
+  extraMs?: number;
 }
 
 export interface Progress {

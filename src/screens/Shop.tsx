@@ -80,7 +80,7 @@ export function Shop() {
       </motion.section>
 
       <p className="text-white/40 text-xs mt-8 text-center">
-        Earn points by practicing in Extra Time or by hand-picking videos from the Library.
+        Earn points by keeping up the drills after your daily goals are done, or by hand-picking videos from the Library.
       </p>
 
       <BottomDock />

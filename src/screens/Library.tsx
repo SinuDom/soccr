@@ -59,7 +59,7 @@ export function Library() {
                   <span className="text-xs text-white/40">{c.targetMinutes} min/day · {c.videos.length} video{c.videos.length === 1 ? '' : 's'}</span>
                 </h2>
               )}
-              <VideoList videos={c.videos} seenSet={seenSet} onPlay={(v) => nav(`/session/extra?video=${encodeURIComponent(v.id)}&lib=1`)} />
+              <VideoList videos={c.videos} seenSet={seenSet} onPlay={(v) => nav(`/session/daily?video=${encodeURIComponent(v.id)}&lib=1`)} />
             </section>
           ))}
         </div>
@@ -110,9 +110,10 @@ function VideoList({
               size="md"
               iconOnly
               icon="play"
+              aria-label={`Play ${v.title}`}
               onClick={() => onPlay(v)}
             >
-              Play {v.title}
+              {`Play ${v.title}`}
             </Button>
           </motion.li>
         );

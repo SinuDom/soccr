@@ -108,7 +108,7 @@ Edit the number in `settings`. All settings are read at runtime — no code chan
 | Setting | Meaning |
 |---|---|
 | `defaultCategoryTargetMinutes` | Default per-category daily target (in minutes); only used by categories without their own `targetMinutes` |
-| `pointsPerExtraMinute` | Points earned per minute of Extra Time practice |
+| `pointsPerExtraMinute` | Points earned per minute of extra practice (drilling past the daily goals, or Library picks) |
 | `freezeCostPoints` | Cost of one streak freeze in the shop |
 | `maxFreezesHeld` | Cap on freezes on hand at once (the shop disables Buy at cap) |
 | `recycleWhenLibraryExhausted` | When true, once every video has been watched the pool recycles randomly |
@@ -173,7 +173,7 @@ Every round:
 2. **Practice** — the huge clock starts, counting real practice time from `Date.now()` timestamps (so a backgrounded tab stays accurate).
 3. **Next** — bank this round's practice time, load a new video, go back to step 1.
 
-**Daily** mode has a countdown target and auto-ends the instant total practice reaches it. **Extra Time** is a stopwatch you stop yourself; time × `pointsPerExtraMinute` = points earned. **Manual pick** from the Library plays a specific video and behaves like Extra Time.
+**Daily** mode has a per-category countdown target and auto-ends once total practice reaches it (letting the running drill finish). Starting an already-completed category continues as **extra practice** — a stopwatch you stop yourself; time × `pointsPerExtraMinute` = points earned and the time lands in the daily extra-time tally shown on Home. **Manual pick** from the Library plays a specific video and behaves like extra practice.
 
 ## Scripts
 

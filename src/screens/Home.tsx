@@ -7,9 +7,8 @@ import { Button } from '@/components/Button';
 import { Icon } from '@/components/Icon';
 import { StreakFlame } from '@/components/StreakFlame';
 import { BottomDock } from '@/components/BottomDock';
-import { ExtraTimeButton } from '@/components/ExtraTimeButton';
 import { toLocalDateString } from '@/lib/domain/streak';
-import { allVideos, dailyGoalProgress, practiceableCategories } from '@/lib/domain/categories';
+import { allVideos, dailyGoalProgress, extraMsToday, practiceableCategories } from '@/lib/domain/categories';
 
 export function Home() {
   const nav = useNavigate();
@@ -26,6 +25,8 @@ export function Home() {
   // it reads as full.
   const dailyProgress = doneToday ? 1 : dailyGoalProgress(progress.drillDay, today, categories);
   const dailyPct = Math.round(dailyProgress * 100);
+  // Practice beyond the goals: extra sessions + goal-session overshoot today.
+  const extraMs = extraMsToday(progress.drillDay, today);
 
   useEffect(() => {
     if (freezeConsumedNotice || streakResetNotice) {
@@ -109,6 +110,12 @@ export function Home() {
             {doneToday ? 'Daily goal completed today' : 'Daily goal not done yet'}
           </span>
         </div>
+        {extraMs > 0 && (
+          <div className="mt-2 flex items-center gap-2 text-ice-400">
+            <Icon name="plus" size={18} />
+            <span>{formatExtra(extraMs)} extra time today</span>
+          </div>
+        )}
       </motion.section>
 
       {/* Phones: the Start button lives in the bottom dock, so surface the daily
@@ -132,18 +139,13 @@ export function Home() {
       <div className="hidden lg:grid grid-cols-1 gap-3">
         <StartDailyButton progress={dailyProgress} disabled={libSize === 0} onClick={() => nav('/session/daily')} />
         <div className="grid grid-cols-2 gap-3">
-          <ExtraTimeButton
-            locked={!doneToday}
-            disabled={libSize === 0}
-            onStart={() => nav('/session/extra')}
-          />
           <Button variant="secondary" size="lg" icon="list" onClick={() => nav('/library')}>
             Library
           </Button>
+          <Button variant="ghost" size="lg" icon="bag" onClick={() => nav('/shop')}>
+            Shop
+          </Button>
         </div>
-        <Button variant="ghost" size="lg" fullWidth icon="bag" onClick={() => nav('/shop')}>
-          Shop
-        </Button>
       </div>
 
       {libSize === 0 && (
@@ -160,9 +162,16 @@ export function Home() {
           : 'Loading library…'}
       </footer>
 
-      <BottomDock disabled={libSize === 0} extraLocked={!doneToday} />
+      <BottomDock disabled={libSize === 0} />
     </div>
   );
+}
+
+/** "12m 30s" (or "45s" under a minute) for the extra-time tally. */
+function formatExtra(ms: number): string {
+  const m = Math.floor(ms / 60_000);
+  const s = Math.floor((ms % 60_000) / 1000);
+  return m > 0 ? `${m}m ${String(s).padStart(2, '0')}s` : `${s}s`;
 }
 
 /**
@@ -186,7 +195,7 @@ function StartDailyButton({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      aria-label={`Start daily session — ${pct}% of today's goal done`}
+      aria-label={complete ? 'Start extra practice — daily goal complete' : `Start daily session — ${pct}% of today's goal done`}
       className={[
         'relative h-16 w-full overflow-hidden rounded-2xl text-xl font-semibold text-ink-950 select-none',
         'bg-pitch-600 shadow-glow',
@@ -205,7 +214,7 @@ function StartDailyButton({
       />
       <span className="relative z-10 flex items-center justify-center gap-3">
         <Icon name="play" size={22} />
-        {complete ? 'Daily goal complete' : 'Start daily session'}
+        {complete ? 'Extra practice' : 'Start daily session'}
         <span className="tabular text-base font-bold opacity-80">{pct}%</span>
       </span>
     </button>

@@ -31,17 +31,26 @@ import { Modal } from '@/components/Modal';
 import { VideoPlayer } from '@/components/VideoPlayer';
 import { isYouTubeShort } from '@/lib/content/url';
 
-/** Deep-linked URL param — 'daily' or 'extra'. Manual (Mode C) uses ?video=. */
-type Params = { mode: 'daily' | 'extra' };
+/**
+ * Deep-linked URL param — kept for old links but no longer meaningful: every
+ * session goes through the daily category flow. Manual (Mode C) uses ?video=.
+ */
+type Params = { mode: string };
+
+/**
+ * Stable empty finished-indices list. A fresh [] literal per render would
+ * re-trigger DrillTimers' reset effect (deps compare by identity) on every
+ * frame, wiping the timers' elapsed contribution.
+ */
+const NO_FINISHED_INDICES: number[] = [];
 
 export function SessionScreen() {
   const nav = useNavigate();
-  const params = useParams<Params>();
-  const mode: SessionMode = params.mode === 'daily' ? 'daily' : 'extra';
+  useParams<Params>(); // the :mode segment is accepted but ignored
   const manualId = useMemo(() => new URLSearchParams(window.location.search).get('video') ?? null, []);
   // Library "play" links pass ?lib=1: just play the video, no drill timers.
   const libraryMode = useMemo(() => new URLSearchParams(window.location.search).get('lib') === '1', []);
-  const effectiveMode: SessionMode = manualId ? 'manual' : mode;
+  const effectiveMode: SessionMode = manualId ? 'manual' : 'daily';
   // Daily sessions run against ONE category. It can be deep-linked (?cat=...);
   // otherwise the in-screen picker below asks for it before anything starts.
   const catParam = useMemo(() => new URLSearchParams(window.location.search).get('cat'), []);
@@ -63,11 +72,17 @@ export function SessionScreen() {
   const category: Category | null = effectiveMode === 'daily'
     ? (categories.find((c) => c.id === categoryId) ?? (categories.length === 1 ? categories[0]! : null))
     : null;
-  // Daily sessions drill the chosen category's videos only; extra/manual
-  // sessions draw from the user's whole library.
+  // Daily sessions drill the chosen category's videos only; manual sessions
+  // draw from the user's whole library.
   const libraryVideos = activeUser
     ? (category ? category.videos : allVideos(activeUser))
     : [];
+
+  // A category whose goal is already met still starts through the same flow,
+  // but as an EXTRA session: no target, timers rerun freely, and the practice
+  // time banks into points + today's extra-time counter when the user stops.
+  const todayISO = toLocalDateString(new Date());
+  const categoryDone = category ? isCategoryComplete(progress.drillDay, todayISO, category) : false;
 
   const [session, setSession] = useState<Session | null>(null);
   const [confirmEnd, setConfirmEnd] = useState(false);
@@ -83,10 +98,12 @@ export function SessionScreen() {
   // "already counted" and drop their contribution.
   const finishedSnapshotRef = useRef<{ videoId: string; indices: number[] } | null>(null);
 
-  const targetMs = category ? category.targetMinutes * 60_000 : null;
+  // The target is frozen into the session at start; read it back from there
+  // so mid-session drill-day updates can't flip the session's nature.
+  const targetMs = session?.targetMs ?? null;
 
-  // Bootstrap: pick the first video from the active category (daily) or the
-  // active user's whole library (extra/manual). Daily waits for a category.
+  // Bootstrap: pick the first video from the active category (daily/extra) or
+  // the active user's whole library (manual). Daily waits for a category.
   useEffect(() => {
     if (!content || !activeUser || initedRef.current) return;
     if (effectiveMode === 'daily' && !category) return;
@@ -107,13 +124,17 @@ export function SessionScreen() {
     if (!firstId) return;
     const now = Date.now();
     startedAtRef.current = now;
-    // Daily goals can be continued across visits: seed the session with the
-    // drill time already credited to THIS category earlier today from
-    // finished drill timers.
-    const today = toLocalDateString(new Date());
-    const baselineMs = category ? categoryPracticeMs(progress.drillDay, today, category) : 0;
-    setSession(startSession({ mode: effectiveMode, firstVideoId: firstId, targetMs, now, baselineMs }));
-  }, [content, activeUser, manualId, targetMs, progress.seenVideoIds, progress.cycleNumber, advanceCycle, effectiveMode, libraryVideos, category, progress.drillDay]);
+    // A completed category runs as an extra session (no target, stopwatch
+    // semantics); otherwise it's a goal session. Daily goals can be continued
+    // across visits: seed the session with the drill time already credited to
+    // THIS category earlier today from finished drill timers.
+    const sessionMode: SessionMode = effectiveMode === 'daily' && categoryDone ? 'extra' : effectiveMode;
+    const goalTargetMs = sessionMode === 'daily' && category ? category.targetMinutes * 60_000 : null;
+    const baselineMs = sessionMode === 'daily' && category
+      ? categoryPracticeMs(progress.drillDay, todayISO, category)
+      : 0;
+    setSession(startSession({ mode: sessionMode, firstVideoId: firstId, targetMs: goalTargetMs, now, baselineMs }));
+  }, [content, activeUser, manualId, progress.seenVideoIds, progress.cycleNumber, advanceCycle, effectiveMode, libraryVideos, category, categoryDone, todayISO, progress.drillDay]);
 
   // Play the start-of-session intro once, then reveal the practice screen.
   useEffect(() => {
@@ -152,8 +173,10 @@ export function SessionScreen() {
         categoryId: category.id,
       };
       // Marks this category done for the day; the streak is credited (and the
-      // completion screen celebrates) once ALL categories are complete.
-      const allDone = creditDailyCategory(today, category, activeUser.categories, entry);
+      // completion screen celebrates) once ALL categories are complete. Time
+      // drilled past the target counts toward today's extra-time tally.
+      const overshootMs = Math.max(0, practiceMs - (s.targetMs ?? practiceMs));
+      const allDone = creditDailyCategory(today, category, activeUser.categories, entry, overshootMs);
       nav(`/session/complete?mode=daily&ms=${practiceMs}&cat=${encodeURIComponent(category.id)}&all=${allDone ? 1 : 0}`, { replace: true });
     } else {
       const entry: Omit<HistoryEntry, 'pointsEarned'> = {
@@ -162,6 +185,7 @@ export function SessionScreen() {
         mode: s.mode,
         practiceMs,
         videoIds,
+        ...(category ? { categoryId: category.id } : {}),
       };
       const earned = bankExtraTime(content.settings, entry);
       nav(`/session/complete?mode=${s.mode}&ms=${practiceMs}&pts=${earned}`, { replace: true });
@@ -203,7 +227,7 @@ export function SessionScreen() {
   // continued later and its time keeps counting toward today's goal.
   const handleTimerFinished = useCallback((index: number) => {
     setSession((s) => {
-      if (!s || effectiveMode !== 'daily') return s;
+      if (!s || s.mode !== 'daily') return s;
       const v = libraryVideos.find((x) => x.id === s.activeVideoId);
       const timerMs = (v?.timer ?? 0) * 1000;
       if (timerMs > 0) {
@@ -212,7 +236,7 @@ export function SessionScreen() {
       }
       return s;
     });
-  }, [effectiveMode, libraryVideos, recordDrillFinished]);
+  }, [libraryVideos, recordDrillFinished]);
 
   const handleLoadError = useCallback(() => { setLoadFailed(true); }, []);
 
@@ -337,23 +361,23 @@ export function SessionScreen() {
   }
 
   const sessionProgress = targetMs ? Math.min(1, totalPracticeMs(session, Date.now()) / targetMs) : null;
-  const startLabel = mode === 'daily'
+  const startLabel = session.mode === 'daily'
     ? (category?.name ?? 'Daily practice')
-    : effectiveMode === 'manual' ? 'Manual pick' : 'Extra time';
+    : session.mode === 'manual' ? 'Manual pick'
+    : category ? `${category.name} · Extra time` : 'Extra time';
 
   // Goal reached while a drill timer is still running: the auto-end is held
   // (see handleDrillElapsed), so tell the user instead of cutting the drill
   // short. If every other category is already done, this run completes the
   // whole daily goal — say so.
   const goalReached = session.phase === 'practicing' && targetMs != null && totalPracticeMs(session) >= targetMs;
-  const todayISO = toLocalDateString(new Date());
   const completesDailyGoal = goalReached && category != null
     && categories.filter((c) => c.id !== category.id)
       .every((c) => isCategoryComplete(progress.drillDay, todayISO, c));
 
   // Resolve the finished-timer snapshot for the active video, refreshing it
   // only when the active video changes (see finishedSnapshotRef).
-  const persistDrills = effectiveMode === 'daily';
+  const persistDrills = session.mode === 'daily';
   if (persistDrills && finishedSnapshotRef.current?.videoId !== session.activeVideoId) {
     const today = toLocalDateString(new Date());
     const dd = progress.drillDay && progress.drillDay.date === today ? progress.drillDay : null;
@@ -362,7 +386,9 @@ export function SessionScreen() {
       indices: dd?.finished[session.activeVideoId] ?? [],
     };
   }
-  const finishedIndices = persistDrills ? (finishedSnapshotRef.current?.indices ?? []) : [];
+  const finishedIndices = persistDrills
+    ? (finishedSnapshotRef.current?.indices ?? NO_FINISHED_INDICES)
+    : NO_FINISHED_INDICES;
 
   return (
     <div className="h-dvh overflow-hidden lg:h-auto lg:min-h-dvh lg:overflow-visible flex flex-col p-3 sm:p-6 max-w-2xl lg:max-w-5xl mx-auto w-full">
@@ -411,7 +437,7 @@ export function SessionScreen() {
               onDrillTimerFinished={handleTimerFinished}
               onLoadError={handleLoadError}
               loadFailed={loadFailed}
-              mode={effectiveMode}
+              mode={session.mode}
               activeVideo={activeVideo}
               libraryMode={libraryMode}
               finishedIndices={finishedIndices}
@@ -490,7 +516,9 @@ function SessionHeader({
 }) {
   const modeLabel = session.mode === 'daily'
     ? `Daily · ${(targetMs ?? 0) / 60_000} min`
-    : session.mode === 'extra' ? 'Extra time' : 'Manual pick';
+    : session.mode === 'extra'
+      ? (categoryName ? `${categoryName} · Extra time` : 'Extra time')
+      : 'Manual pick';
   return (
     <header className="flex items-center gap-3">
       <Button
@@ -748,7 +776,9 @@ function CategoryPicker({
                     <span>
                       <span className="block font-bold text-lg leading-tight">{c.name}</span>
                       <span className="block text-white/50 text-xs mt-0.5">
-                        {c.targetMinutes} min goal · {c.videos.length} video{c.videos.length === 1 ? '' : 's'}
+                        {done
+                          ? `Goal done — extra time from here · ${c.videos.length} video${c.videos.length === 1 ? '' : 's'}`
+                          : `${c.targetMinutes} min goal · ${c.videos.length} video${c.videos.length === 1 ? '' : 's'}`}
                       </span>
                     </span>
                     {done ? (

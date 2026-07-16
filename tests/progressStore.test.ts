@@ -19,6 +19,14 @@ const entry = (categoryId: string): Omit<HistoryEntry, 'completedDaily'> => ({
   date: TODAY, startedAt: 1, mode: 'daily', practiceMs: 0, pointsEarned: 0, videoIds: [], categoryId,
 });
 
+const SETTINGS_FIXTURE = {
+  defaultCategoryTargetMinutes: 15,
+  pointsPerExtraMinute: 10,
+  freezeCostPoints: 100,
+  maxFreezesHeld: 1,
+  recycleWhenLibraryExhausted: true,
+};
+
 beforeEach(() => {
   localStorage.clear();
   useProgressStore.setState({
@@ -48,6 +56,33 @@ describe('creditDailyCategory', () => {
   });
 });
 
+describe('extra-time tally', () => {
+  it('bankExtraTime awards points and adds to today\'s extra tally', () => {
+    const earned = useProgressStore.getState().bankExtraTime(SETTINGS_FIXTURE, {
+      date: TODAY, startedAt: 1, mode: 'extra', practiceMs: 150_000, videoIds: [], categoryId: 'ball',
+    });
+    expect(earned).toBe(25); // 2.5 min × 10 pts
+    const p = useProgressStore.getState().progress;
+    expect(p.points).toBe(25);
+    expect(p.drillDay?.extraMs).toBe(150_000);
+    // A second banking on the same day accumulates.
+    useProgressStore.getState().bankExtraTime(SETTINGS_FIXTURE, {
+      date: TODAY, startedAt: 2, mode: 'extra', practiceMs: 30_000, videoIds: [],
+    });
+    expect(useProgressStore.getState().progress.drillDay?.extraMs).toBe(180_000);
+  });
+
+  it('creditDailyCategory records goal-session overshoot as extra time', () => {
+    useProgressStore.getState().creditDailyCategory(TODAY, ball, CATS, entry('ball'), 42_000);
+    const p = useProgressStore.getState().progress;
+    expect(p.drillDay?.completedCategories).toEqual(['ball']);
+    expect(p.drillDay?.extraMs).toBe(42_000);
+    // No overshoot leaves the tally untouched.
+    useProgressStore.getState().creditDailyCategory(TODAY, speed, CATS, entry('speed'), 0);
+    expect(useProgressStore.getState().progress.drillDay?.extraMs).toBe(42_000);
+  });
+});
+
 describe('recordDrillFinished', () => {
   it('preserves completedCategories when a later drill timer is persisted', () => {
     // Complete ball (marker only — derived time stays below its target)…
@@ -61,6 +96,14 @@ describe('recordDrillFinished', () => {
     const allDone = useProgressStore.getState().creditDailyCategory(TODAY, speed, CATS, entry('speed'));
     expect(allDone).toBe(true);
     expect(useProgressStore.getState().progress.currentStreak).toBe(1);
+  });
+
+  it('preserves the extra-time tally when a drill timer is persisted', () => {
+    useProgressStore.getState().bankExtraTime(SETTINGS_FIXTURE, {
+      date: TODAY, startedAt: 1, mode: 'extra', practiceMs: 90_000, videoIds: [],
+    });
+    useProgressStore.getState().recordDrillFinished(TODAY, 'b1', 0, 90_000);
+    expect(useProgressStore.getState().progress.drillDay?.extraMs).toBe(90_000);
   });
 
   it('is idempotent per timer index and accumulates practiceMs', () => {

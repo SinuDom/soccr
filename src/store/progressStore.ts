@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { Category, HistoryEntry, Progress, Settings, User, Vault } from '@/lib/domain/types';
 import { DEFAULT_PROGRESS, DEFAULT_VAULT } from '@/lib/domain/types';
-import { allCategoriesComplete, markCategoryCompleted } from '@/lib/domain/categories';
+import { allCategoriesComplete, drillDayFor, markCategoryCompleted } from '@/lib/domain/categories';
 import { load, save } from '@/lib/storage/progress';
 import { LEGACY_USER_ID } from '@/lib/storage/migrate';
 import {
@@ -50,14 +50,16 @@ interface ProgressState {
   /**
    * Record a finished daily category session: mark the category's target as
    * hit today and log the history entry. Once EVERY category in `categories`
-   * is complete for the day, the streak is credited. Returns whether the
-   * whole daily goal is now complete.
+   * is complete for the day, the streak is credited. Time drilled past the
+   * target (`overshootMs`) counts toward today's extra-time tally. Returns
+   * whether the whole daily goal is now complete.
    */
   creditDailyCategory: (
     todayISO: string,
     category: Category,
     categories: Category[],
     entry: Omit<HistoryEntry, 'completedDaily'>,
+    overshootMs?: number,
   ) => boolean;
   bankExtraTime: (settings: Settings, entry: Omit<HistoryEntry, 'pointsEarned'>) => number;
 
@@ -180,9 +182,12 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
     commitActive(set, get, { ...p, seenVideoIds: nextSeenIds, cycleNumber: nextCycleNumber });
   },
 
-  creditDailyCategory: (todayISO, category, categories, entry) => {
+  creditDailyCategory: (todayISO, category, categories, entry, overshootMs = 0) => {
     const p = get().progress;
-    const drillDay = markCategoryCompleted(p.drillDay, todayISO, category.id);
+    let drillDay = markCategoryCompleted(p.drillDay, todayISO, category.id);
+    if (overshootMs > 0) {
+      drillDay = { ...drillDay, extraMs: (drillDay.extraMs ?? 0) + overshootMs };
+    }
     const allDone = allCategoriesComplete(drillDay, todayISO, categories);
     const base: Progress = { ...p, drillDay };
     const after = allDone ? applyDailyCompletion(base, todayISO) : base;
@@ -195,16 +200,17 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
     const p = get().progress;
     const minutes = entry.practiceMs / 60_000;
     const { progress: withPoints, earned } = awardPoints(p, minutes, settings.pointsPerExtraMinute);
+    // Extra sessions also feed today's extra-time tally (shown on Home).
+    const day = drillDayFor(p.drillDay, entry.date);
+    const drillDay = { ...day, extraMs: (day.extraMs ?? 0) + Math.max(0, entry.practiceMs) };
     const history = [...withPoints.history, { ...entry, pointsEarned: earned }];
-    commitActive(set, get, { ...withPoints, history });
+    commitActive(set, get, { ...withPoints, drillDay, history });
     return earned;
   },
 
   recordDrillFinished: (todayISO, videoId, timerIndex, timerMs) => {
     const p = get().progress;
-    const day = p.drillDay && p.drillDay.date === todayISO
-      ? p.drillDay
-      : { date: todayISO, practiceMs: 0, finished: {} as Record<string, number[]> };
+    const day = drillDayFor(p.drillDay, todayISO);
     const existing = day.finished[videoId] ?? [];
     if (existing.includes(timerIndex)) return; // already credited today — idempotent
     const finished = { ...day.finished, [videoId]: [...existing, timerIndex] };

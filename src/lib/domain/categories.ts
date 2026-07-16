@@ -15,6 +15,16 @@ function dayFor(drillDay: DrillDayProgress | undefined, todayISO: string): Drill
   return drillDay && drillDay.date === todayISO ? drillDay : null;
 }
 
+/** Today's drill-day record, rolling a stale/missing one over to a fresh day. */
+export function drillDayFor(drillDay: DrillDayProgress | undefined, todayISO: string): DrillDayProgress {
+  return dayFor(drillDay, todayISO) ?? { date: todayISO, practiceMs: 0, finished: {} };
+}
+
+/** Extra practice time recorded today (beyond the daily goals). */
+export function extraMsToday(drillDay: DrillDayProgress | undefined, todayISO: string): number {
+  return dayFor(drillDay, todayISO)?.extraMs ?? 0;
+}
+
 /**
  * Practice time credited to one category today, derived from the persisted
  * finished-timer map: each finished timer of a video contributes that video's
@@ -96,7 +106,7 @@ export function markCategoryCompleted(
   todayISO: string,
   categoryId: string,
 ): DrillDayProgress {
-  const day = dayFor(drillDay, todayISO) ?? { date: todayISO, practiceMs: 0, finished: {} };
+  const day = drillDayFor(drillDay, todayISO);
   const completed = day.completedCategories ?? [];
   if (completed.includes(categoryId)) return day;
   return { ...day, completedCategories: [...completed, categoryId] };

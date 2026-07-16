@@ -1,25 +1,17 @@
-import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Icon, type IconName } from './Icon';
-import { useProgressStore } from '@/store/progressStore';
-import { toLocalDateString } from '@/lib/domain/streak';
 
 /**
  * App-style bottom navigation, shown on phones / vertically-held devices
- * (hidden from `lg` up, where the in-page buttons take over). Four flanking
- * icon tabs surround a raised central "Start" button that kicks off the daily
- * session. `disabled` reflects an empty library (nothing to practise).
- *
- * `extraLocked` can force the lock; when omitted it is derived from whether the
- * daily goal has been completed today (extra time is only unlocked afterwards).
+ * (hidden from `lg` up, where the in-page buttons take over). Flanking icon
+ * tabs surround a raised central "Start" button that kicks off the daily
+ * session — which continues as extra practice once the goals are done.
+ * `disabled` reflects an empty library (nothing to practise).
  */
-export function BottomDock({ disabled = false, extraLocked }: { disabled?: boolean; extraLocked?: boolean }) {
+export function BottomDock({ disabled = false }: { disabled?: boolean }) {
   const nav = useNavigate();
   const { pathname } = useLocation();
-  const progress = useProgressStore((s) => s.progress);
-  const doneToday = progress.lastCompletedDate === toLocalDateString(new Date());
-  const locked = extraLocked ?? !doneToday;
 
   return (
     <nav
@@ -35,57 +27,10 @@ export function BottomDock({ disabled = false, extraLocked }: { disabled?: boole
           onClick={() => nav('/session/daily')}
         />
 
-        <ExtraTab
-          disabled={disabled}
-          locked={locked}
-          onStart={() => nav('/session/extra')}
-        />
         <Tab icon="bag" label="Shop" active={pathname === '/shop'} onClick={() => nav('/shop')} />
+        <Tab icon="settings" label="Settings" active={pathname === '/settings'} onClick={() => nav('/settings')} />
       </div>
     </nav>
-  );
-}
-
-/**
- * The "Extra time" tab. Locked until the daily goal is done; pressing it while
- * locked flashes a "Locked" label with a lock icon and a short shake.
- */
-function ExtraTab({ disabled, locked, onStart }: { disabled?: boolean; locked: boolean; onStart: () => void }) {
-  const [flash, setFlash] = useState(false);
-
-  useEffect(() => {
-    if (!flash) return;
-    const t = setTimeout(() => setFlash(false), 1600);
-    return () => clearTimeout(t);
-  }, [flash]);
-
-  useEffect(() => {
-    if (!locked) setFlash(false);
-  }, [locked]);
-
-  const handleClick = () => {
-    if (locked) { setFlash(true); return; }
-    onStart();
-  };
-
-  return (
-    <motion.button
-      type="button"
-      aria-label={locked ? 'Extra time locked' : 'Extra time'}
-      disabled={disabled}
-      onClick={handleClick}
-      animate={flash ? { x: [0, -4, 4, -3, 3, 0] } : { x: 0 }}
-      transition={{ duration: 0.4 }}
-      className={[
-        'flex w-16 flex-col items-center gap-1 rounded-2xl py-1.5',
-        'transition-colors duration-150 active:scale-95 motion-reduce:transform-none',
-        'disabled:opacity-40',
-        flash ? 'text-red-300' : locked ? 'text-white/40 hover:text-white/60' : 'text-white/50 hover:text-white',
-      ].join(' ')}
-    >
-      <Icon name={locked ? 'lock' : 'plus'} size={22} />
-      <span className="text-[10px] font-semibold leading-none">{flash ? 'Locked' : 'Extra time'}</span>
-    </motion.button>
   );
 }
 
