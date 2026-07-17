@@ -53,6 +53,18 @@ const progressMigrators: ProgressMigrator[] = [
         : seedCompletedDates(raw),
     }),
   },
+  {
+    // v2 → v3: track which completed days were freeze-covered so the calendar
+    // can render them as frozen. Past freezes weren't recorded, so this starts
+    // empty and fills going forward.
+    from: 2,
+    to: 3,
+    migrate: (raw: any) => ({
+      ...raw,
+      schemaVersion: 3,
+      frozenDates: Array.isArray(raw?.frozenDates) ? raw.frozenDates : [],
+    }),
+  },
 ];
 
 export function migrateProgress(raw: any): Progress {

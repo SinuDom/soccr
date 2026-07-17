@@ -26,6 +26,7 @@ export function StreakCalendar() {
   const today = toLocalDateString(new Date());
   const now = new Date();
   const completed = useMemo(() => new Set(progress.completedDates ?? []), [progress.completedDates]);
+  const frozen = useMemo(() => new Set(progress.frozenDates ?? []), [progress.frozenDates]);
 
   const [view, setView] = useState({ year: now.getFullYear(), month: now.getMonth() });
   const [confirmDate, setConfirmDate] = useState<string | null>(null);
@@ -124,6 +125,7 @@ export function StreakCalendar() {
                 date={date}
                 dayNum={Number(date.slice(8))}
                 completed={completed.has(date)}
+                frozen={frozen.has(date)}
                 isToday={date === today}
                 isFuture={date > today}
                 onMark={() => setConfirmDate(date)}
@@ -197,6 +199,7 @@ function DayCell({
   date,
   dayNum,
   completed,
+  frozen,
   isToday,
   isFuture,
   onMark,
@@ -204,12 +207,30 @@ function DayCell({
   date: string;
   dayNum: number;
   completed: boolean;
+  frozen: boolean;
   isToday: boolean;
   isFuture: boolean;
   onMark: () => void;
 }) {
   const base =
     'relative aspect-square rounded-2xl grid place-items-center text-sm font-bold select-none transition-all';
+
+  // A freeze-saved day: read it as frozen (ice + snowflake), not practiced.
+  if (frozen) {
+    return (
+      <div
+        aria-label={`${date} — streak freeze used`}
+        className={[
+          base,
+          'bg-ice-500/25 text-ice-200 border border-ice-500/50 shadow-[0_2px_10px_-2px_rgba(56,189,248,0.4)]',
+          isToday ? 'ring-2 ring-white/90' : '',
+        ].join(' ')}
+      >
+        <span className="leading-none">{dayNum}</span>
+        <Icon name="snowflake" size={12} className="absolute bottom-1 right-1 opacity-80" />
+      </div>
+    );
+  }
 
   if (completed) {
     return (
@@ -253,6 +274,12 @@ function Legend() {
     <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-white/50">
       <span className="inline-flex items-center gap-1.5">
         <span className="h-3.5 w-3.5 rounded-md bg-pitch-500" /> Done
+      </span>
+      <span className="inline-flex items-center gap-1.5">
+        <span className="grid h-3.5 w-3.5 place-items-center rounded-md border border-ice-500/50 bg-ice-500/25 text-ice-200">
+          <Icon name="snowflake" size={9} />
+        </span>{' '}
+        Freeze used
       </span>
       <span className="inline-flex items-center gap-1.5">
         <span className="h-3.5 w-3.5 rounded-md border border-ink-600" /> Tap to mark done

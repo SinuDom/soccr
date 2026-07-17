@@ -52,17 +52,30 @@ describe('migrateProgress (inner, per-user)', () => {
       ],
     };
     const p = migrateProgress(v1);
-    expect(p.schemaVersion).toBe(2);
+    expect(p.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     // history completed day + the 2-day streak run ending 2026-07-16.
     expect(p.completedDates).toEqual(['2026-07-10', '2026-07-15', '2026-07-16']);
+    // No historical freeze record — starts empty.
+    expect(p.frozenDates).toEqual([]);
   });
 
-  it('an already-migrated v2 record keeps its completedDates', () => {
+  it('an already-migrated v2 record keeps its completedDates and gains empty frozenDates', () => {
     const v2 = {
       schemaVersion: 2, currentStreak: 1, seenVideoIds: [], history: [],
       completedDates: ['2026-07-01', '2026-07-02'],
     };
-    expect(migrateProgress(v2).completedDates).toEqual(['2026-07-01', '2026-07-02']);
+    const p = migrateProgress(v2);
+    expect(p.completedDates).toEqual(['2026-07-01', '2026-07-02']);
+    expect(p.frozenDates).toEqual([]);
+    expect(p.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+  });
+
+  it('v3 preserves an existing frozenDates set', () => {
+    const v3 = {
+      schemaVersion: 3, currentStreak: 1, seenVideoIds: [], history: [],
+      completedDates: ['2026-07-01', '2026-07-02'], frozenDates: ['2026-07-02'],
+    };
+    expect(migrateProgress(v3).frozenDates).toEqual(['2026-07-02']);
   });
 
   it('the chosen avatar icon survives migration from every schema version', () => {

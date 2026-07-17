@@ -93,6 +93,11 @@ export interface Progress {
    * basis for recomputing the streak when past days are backfilled.
    */
   completedDates: string[];
+  /**
+   * The subset of `completedDates` that were saved by a streak freeze rather
+   * than actually practiced. Rendered distinctly (frozen) on the calendar.
+   */
+  frozenDates: string[];
   /** Persisted finished-drill progress for the current local day (optional). */
   drillDay?: DrillDayProgress;
   /** Chosen profile-picture filename from the avatar collection (undefined = show initial letter). */
@@ -100,7 +105,7 @@ export interface Progress {
 }
 
 /** Version of the inner per-user Progress object. */
-export const CURRENT_SCHEMA_VERSION = 2;
+export const CURRENT_SCHEMA_VERSION = 3;
 
 /**
  * Vault: the outer, multi-user object stored in localStorage. Each user gets
@@ -132,4 +137,5 @@ export const DEFAULT_PROGRESS: Progress = {
   cycleNumber: 1,
   history: [],
   completedDates: [],
+  frozenDates: [],
 };

@@ -63,6 +63,9 @@ describe('evaluateOnLaunch', () => {
     expect(r.progress.currentStreak).toBe(5);
     expect(r.progress.freezesHeld).toBe(0);
     expect(r.progress.lastCompletedDate).toBe('2026-07-14');
+    // The freeze-covered day is recorded, and flagged frozen for the calendar.
+    expect(r.progress.completedDates).toContain('2026-07-14');
+    expect(r.progress.frozenDates).toEqual(['2026-07-14']);
   });
 
   it('missed yesterday with no freeze → streak resets', () => {

@@ -129,8 +129,10 @@ export function evaluateOnLaunch(progress: Progress, todayISO: string): Evaluati
         freezesHeld: progress.freezesHeld - 1,
         lastCompletedDate: yesterdayISO,
         // Record the freeze-covered day so the calendar shows it filled and a
-        // later backfill recompute keeps the run intact.
+        // later backfill recompute keeps the run intact…
         completedDates: addCompletedDate(progress.completedDates, yesterdayISO),
+        // …and mark it frozen so the calendar renders it distinctly.
+        frozenDates: addCompletedDate(progress.frozenDates, yesterdayISO),
       },
       freezeConsumed: true,
       streakReset: false,
