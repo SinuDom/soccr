@@ -34,6 +34,8 @@ export type IconName =
   | 'user'
   | 'external'
   | 'calendar'
+  | 'flame'
+  | 'trophy'
   | 'edit';
 
 interface Props extends Omit<SVGProps<SVGSVGElement>, 'name'> {
@@ -206,6 +208,17 @@ const PATHS: Record<IconName, JSX.Element> = {
       <line x1="3" y1="9" x2="21" y2="9" />
       <line x1="8" y1="2" x2="8" y2="6" />
       <line x1="16" y1="2" x2="16" y2="6" />
+    </>
+  ),
+  flame: (
+    <path d="M12 2c1 4 5 5.5 5 9.5a5 5 0 0 1-10 0c0-1.5.5-2.5 1.2-3.4C8.8 9.5 9.5 10 10 10c.5-1.5-.5-3 2-8Z" />
+  ),
+  trophy: (
+    <>
+      <path d="M6 4h12v4a6 6 0 0 1-12 0z" />
+      <path d="M6 6H4a2 2 0 0 0 2 2m12-2h2a2 2 0 0 1-2 2" />
+      <line x1="12" y1="14" x2="12" y2="18" />
+      <path d="M9 21h6M9 21a3 3 0 0 1 3-3 3 3 0 0 1 3 3" />
     </>
   ),
   edit: (

@@ -4,9 +4,8 @@ import { motion } from 'framer-motion';
 import { useProgressStore } from '@/store/progressStore';
 import { useContentStore, getUser } from '@/store/contentStore';
 import { Button } from '@/components/Button';
-import { Icon } from '@/components/Icon';
+import { Icon, type IconName } from '@/components/Icon';
 import { Modal } from '@/components/Modal';
-import { StreakFlame } from '@/components/StreakFlame';
 import { toLocalDateString } from '@/lib/domain/streak';
 import { practiceableCategories } from '@/lib/domain/categories';
 
@@ -69,15 +68,23 @@ export function StreakCalendar() {
         </div>
       </motion.header>
 
-      <section className="rounded-3xl bg-ink-800 border border-ink-700 p-5 mb-5 flex items-center justify-between">
-        <StreakFlame streak={progress.currentStreak} />
-        <div className="flex gap-5 text-right">
-          <Stat label="Best" value={progress.longestStreak} />
-          <Stat label="Days" value={completed.size} />
-        </div>
-      </section>
+      <motion.section
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.04, type: 'spring', stiffness: 220, damping: 24 }}
+        className="grid grid-cols-3 gap-3 mb-4"
+      >
+        <StatTile icon="flame" value={progress.currentStreak} label="day streak" accent />
+        <StatTile icon="trophy" value={progress.longestStreak} label="best ever" />
+        <StatTile icon="calendar" value={completed.size} label="total days" />
+      </motion.section>
 
-      <section className="rounded-3xl bg-ink-800 border border-ink-700 p-4 sm:p-5">
+      <motion.section
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.08, type: 'spring', stiffness: 220, damping: 24 }}
+        className="rounded-3xl bg-ink-800 border border-ink-700 p-4 sm:p-5"
+      >
         <div className="flex items-center justify-between mb-4">
           <button
             type="button"
@@ -87,7 +94,7 @@ export function StreakCalendar() {
           >
             <Icon name="arrow-left" size={20} />
           </button>
-          <span className="font-bold">{monthLabel}</span>
+          <span className="text-lg font-bold tracking-tight">{monthLabel}</span>
           <button
             type="button"
             aria-label="Next month"
@@ -99,15 +106,15 @@ export function StreakCalendar() {
           </button>
         </div>
 
-        <div className="grid grid-cols-7 gap-1.5 mb-1.5">
+        <div className="grid grid-cols-7 gap-1.5 sm:gap-2 mb-2">
           {WEEKDAYS.map((w) => (
-            <div key={w} className="text-center text-[11px] uppercase tracking-wide text-white/40">
+            <div key={w} className="text-center text-[11px] font-semibold uppercase tracking-wide text-white/35">
               {w}
             </div>
           ))}
         </div>
 
-        <div className="grid grid-cols-7 gap-1.5">
+        <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
           {cells.map((date, i) =>
             date == null ? (
               <div key={`pad-${i}`} />
@@ -126,7 +133,7 @@ export function StreakCalendar() {
         </div>
 
         <Legend />
-      </section>
+      </motion.section>
 
       <Modal
         open={confirmDate != null}
@@ -159,11 +166,29 @@ export function StreakCalendar() {
   );
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
+function StatTile({
+  icon,
+  value,
+  label,
+  accent,
+}: {
+  icon: IconName;
+  value: number;
+  label: string;
+  accent?: boolean;
+}) {
   return (
-    <div>
-      <div className="text-[11px] uppercase tracking-widest text-white/50">{label}</div>
-      <div className="text-2xl font-black tabular">{value}</div>
+    <div
+      className={[
+        'rounded-2xl border p-3.5 flex flex-col gap-1',
+        accent ? 'border-pitch-500/40 bg-pitch-500/10' : 'border-ink-700 bg-ink-800',
+      ].join(' ')}
+    >
+      <Icon name={icon} size={18} className={accent ? 'text-pitch-400' : 'text-white/50'} />
+      <span className={['text-3xl font-black tabular leading-none', accent ? 'text-pitch-300' : ''].join(' ')}>
+        {value}
+      </span>
+      <span className="text-[11px] uppercase tracking-wide text-white/45">{label}</span>
     </div>
   );
 }
@@ -183,16 +208,21 @@ function DayCell({
   isFuture: boolean;
   onMark: () => void;
 }) {
-  const markable = !completed && !isFuture;
-  const base = 'relative aspect-square rounded-xl grid place-items-center text-sm font-semibold select-none transition-colors';
+  const base =
+    'relative aspect-square rounded-2xl grid place-items-center text-sm font-bold select-none transition-all';
 
   if (completed) {
     return (
       <div
         aria-label={`${date} — done`}
-        className={[base, 'bg-pitch-500 text-ink-950', isToday ? 'ring-2 ring-white/80' : ''].join(' ')}
+        className={[
+          base,
+          'bg-pitch-500 text-ink-950 shadow-[0_2px_10px_-2px_rgba(34,197,94,0.5)]',
+          isToday ? 'ring-2 ring-white/90' : '',
+        ].join(' ')}
       >
-        <Icon name="check" size={18} />
+        <span className="leading-none">{dayNum}</span>
+        <Icon name="check" size={12} className="absolute bottom-1 right-1 opacity-70" />
       </div>
     );
   }
@@ -201,15 +231,16 @@ function DayCell({
     return <div className={[base, 'text-white/20'].join(' ')}>{dayNum}</div>;
   }
 
+  // Past or today, not yet done → tap to mark.
   return (
     <button
       type="button"
       aria-label={`Mark ${date} done`}
-      onClick={markable ? onMark : undefined}
+      onClick={onMark}
       className={[
         base,
-        'border border-ink-600 text-white/70 hover:border-pitch-500 hover:text-white active:scale-95 motion-reduce:transform-none',
-        isToday ? 'ring-2 ring-pitch-400' : '',
+        'border text-white/70 hover:text-white hover:bg-pitch-500/10 active:scale-95 motion-reduce:transform-none',
+        isToday ? 'border-pitch-400 ring-1 ring-pitch-400/60 text-white' : 'border-ink-600 hover:border-pitch-500',
       ].join(' ')}
     >
       {dayNum}
@@ -221,10 +252,13 @@ function Legend() {
   return (
     <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-white/50">
       <span className="inline-flex items-center gap-1.5">
-        <span className="h-3 w-3 rounded bg-pitch-500" /> Done
+        <span className="h-3.5 w-3.5 rounded-md bg-pitch-500" /> Done
       </span>
       <span className="inline-flex items-center gap-1.5">
-        <span className="h-3 w-3 rounded border border-ink-600" /> Tap to mark done
+        <span className="h-3.5 w-3.5 rounded-md border border-ink-600" /> Tap to mark done
+      </span>
+      <span className="inline-flex items-center gap-1.5">
+        <span className="h-3.5 w-3.5 rounded-md border border-pitch-400 ring-1 ring-pitch-400/60" /> Today
       </span>
     </div>
   );

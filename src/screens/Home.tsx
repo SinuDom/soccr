@@ -51,20 +51,27 @@ export function Home() {
           <h1 className="text-3xl font-black tracking-tight">Soccr</h1>
           <p className="text-white/60 text-sm">Watch. Drill. Keep the streak.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
+          <Link
+            to="/streak"
+            aria-label="Streak calendar"
+            className="grid place-items-center h-11 w-11 rounded-2xl text-white/70 hover:text-white hover:bg-ink-800 transition-colors"
+          >
+            <Icon name="calendar" size={26} />
+          </Link>
           <Link
             to="/"
             aria-label="Switch profile"
             className="grid place-items-center h-11 w-11 rounded-2xl text-white/70 hover:text-white hover:bg-ink-800 transition-colors"
           >
-            <Icon name="user" size={22} />
+            <Icon name="user" size={26} />
           </Link>
           <Link
             to="/settings"
             aria-label="Settings"
             className="grid place-items-center h-11 w-11 rounded-2xl text-white/70 hover:text-white hover:bg-ink-800 transition-colors"
           >
-            <Icon name="settings" size={22} />
+            <Icon name="settings" size={26} />
           </Link>
         </div>
       </motion.header>
@@ -99,12 +106,9 @@ export function Home() {
           <Link
             to="/streak"
             aria-label="Open streak calendar"
-            className="group -m-2 rounded-2xl p-2 transition-colors hover:bg-ink-700/50"
+            className="rounded-2xl border border-ink-600 bg-ink-900/60 px-4 py-3 transition-colors hover:border-pitch-500 hover:bg-ink-700/50 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pitch-400"
           >
             <StreakFlame streak={progress.currentStreak} large />
-            <span className="mt-1 inline-flex items-center gap-1 text-[11px] uppercase tracking-widest text-white/40 group-hover:text-white/70">
-              <Icon name="calendar" size={13} /> Calendar
-            </span>
           </Link>
           <div className="text-right">
             <div className="text-xs uppercase tracking-widest text-white/60">Points</div>
@@ -129,14 +133,16 @@ export function Home() {
           </div>
         )}
         {!doneToday && libSize > 0 && (
-          <button
-            type="button"
+          <Button
+            variant="secondary"
+            size="md"
+            icon="check"
+            fullWidth
+            className="mt-5"
             onClick={() => setConfirmOutside(true)}
-            className="mt-4 inline-flex items-center gap-2 text-sm text-white/60 underline decoration-white/30 underline-offset-4 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pitch-400 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-800 rounded"
           >
-            <Icon name="check" size={16} />
-            Trained outside the app? Mark today done
-          </button>
+            Trained outside the app
+          </Button>
         )}
       </motion.section>
 
