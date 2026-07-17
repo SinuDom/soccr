@@ -39,6 +39,32 @@ describe('migrateProgress (inner, per-user)', () => {
     expect(p.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
   });
 
+  it('v1 → v2 seeds completedDates from history and the live streak', () => {
+    const v1 = {
+      schemaVersion: 1,
+      currentStreak: 2,
+      longestStreak: 5,
+      lastCompletedDate: '2026-07-16',
+      seenVideoIds: [],
+      history: [
+        { date: '2026-07-10', startedAt: 1, mode: 'daily', practiceMs: 1, pointsEarned: 0, videoIds: [], completedDaily: true },
+        { date: '2026-07-11', startedAt: 2, mode: 'daily', practiceMs: 1, pointsEarned: 0, videoIds: [], completedDaily: false },
+      ],
+    };
+    const p = migrateProgress(v1);
+    expect(p.schemaVersion).toBe(2);
+    // history completed day + the 2-day streak run ending 2026-07-16.
+    expect(p.completedDates).toEqual(['2026-07-10', '2026-07-15', '2026-07-16']);
+  });
+
+  it('an already-migrated v2 record keeps its completedDates', () => {
+    const v2 = {
+      schemaVersion: 2, currentStreak: 1, seenVideoIds: [], history: [],
+      completedDates: ['2026-07-01', '2026-07-02'],
+    };
+    expect(migrateProgress(v2).completedDates).toEqual(['2026-07-01', '2026-07-02']);
+  });
+
   it('the chosen avatar icon survives migration from every schema version', () => {
     // Regression: a new app version must never lose the profile icon.
     const v0 = { currentStreak: 1, seenVideoIds: [], history: [], avatarIcon: '003-lion.png' };

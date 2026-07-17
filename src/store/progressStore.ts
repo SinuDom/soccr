@@ -5,10 +5,12 @@ import { allCategoriesComplete, drillDayFor, markCategoryCompleted } from '@/lib
 import { load, save } from '@/lib/storage/progress';
 import { LEGACY_USER_ID } from '@/lib/storage/migrate';
 import {
+  addCompletedDate,
   applyDailyCompletion,
   awardPoints,
   buyFreeze,
   evaluateOnLaunch,
+  recomputeStreak,
   toLocalDateString,
   type PurchaseResult,
 } from '@/lib/domain/streak';
@@ -63,12 +65,14 @@ interface ProgressState {
   ) => boolean;
 
   /**
-   * Credit today's whole daily goal without drilling in the app — for when the
-   * user trained elsewhere (e.g. club training) and wants to keep the streak.
-   * Marks every practiceable category complete for the day and credits the
-   * streak. Idempotent per day.
+   * Credit the daily goal for `dateISO` without drilling in the app — for when
+   * the user trained elsewhere (e.g. club training) and wants to keep the
+   * streak. Works for today or any past day (future days are ignored). Adds the
+   * day to the completed-days set and recomputes the streak from it. For today
+   * it also marks every practiceable category complete so the goal UI reads
+   * full. Idempotent — a day already completed is left untouched.
    */
-  markDailyDoneManually: (todayISO: string, categories: Category[]) => void;
+  markDayDone: (dateISO: string, todayISO: string, categories: Category[]) => void;
   bankExtraTime: (settings: Settings, entry: Omit<HistoryEntry, 'pointsEarned'>) => number;
 
   /**
@@ -204,17 +208,26 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
     return allDone;
   },
 
-  markDailyDoneManually: (todayISO, categories) => {
+  markDayDone: (dateISO, todayISO, categories) => {
     const p = get().progress;
-    if (p.lastCompletedDate === todayISO) return; // already credited today
-    const practiceable = categories.filter((c) => c.videos.length > 0);
-    let drillDay = drillDayFor(p.drillDay, todayISO);
-    for (const c of practiceable) {
-      drillDay = markCategoryCompleted(drillDay, todayISO, c.id);
+    if (dateISO > todayISO) return; // can't complete a future day
+    if ((p.completedDates ?? []).includes(dateISO)) return; // already done — idempotent
+
+    // Marking today: also mark every category complete so the daily-goal UI
+    // (progress bar / status) reads full. Past days have no live drill record.
+    let drillDay = p.drillDay;
+    if (dateISO === todayISO) {
+      let dd = drillDayFor(p.drillDay, todayISO);
+      for (const c of categories.filter((c) => c.videos.length > 0)) {
+        dd = markCategoryCompleted(dd, todayISO, c.id);
+      }
+      drillDay = dd;
     }
-    const after = applyDailyCompletion({ ...p, drillDay }, todayISO);
+
+    const completedDates = addCompletedDate(p.completedDates, dateISO);
+    const rc = recomputeStreak(completedDates, todayISO);
     const entry: HistoryEntry = {
-      date: todayISO,
+      date: dateISO,
       startedAt: Date.now(),
       mode: 'manual',
       practiceMs: 0,
@@ -222,7 +235,15 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
       videoIds: [],
       completedDaily: true,
     };
-    commitActive(set, get, { ...after, history: [...after.history, entry] });
+    commitActive(set, get, {
+      ...p,
+      drillDay,
+      completedDates,
+      currentStreak: rc.currentStreak,
+      longestStreak: Math.max(p.longestStreak, rc.longestStreak),
+      lastCompletedDate: rc.lastCompletedDate,
+      history: [...p.history, entry],
+    });
   },
 
   bankExtraTime: (settings, entry) => {

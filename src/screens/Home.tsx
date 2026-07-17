@@ -13,7 +13,7 @@ import { allVideos, dailyGoalProgress, extraMsToday, practiceableCategories } fr
 
 export function Home() {
   const nav = useNavigate();
-  const { progress, activeUserId, freezeConsumedNotice, streakResetNotice, dismissNotices, markDailyDoneManually } =
+  const { progress, activeUserId, freezeConsumedNotice, streakResetNotice, dismissNotices, markDayDone } =
     useProgressStore();
   const content = useContentStore((s) => s.content);
   const [confirmOutside, setConfirmOutside] = useState(false);
@@ -96,7 +96,16 @@ export function Home() {
         className="rounded-3xl bg-ink-800 border border-ink-700 p-6 mb-6"
       >
         <div className="flex items-center justify-between">
-          <StreakFlame streak={progress.currentStreak} large />
+          <Link
+            to="/streak"
+            aria-label="Open streak calendar"
+            className="group -m-2 rounded-2xl p-2 transition-colors hover:bg-ink-700/50"
+          >
+            <StreakFlame streak={progress.currentStreak} large />
+            <span className="mt-1 inline-flex items-center gap-1 text-[11px] uppercase tracking-widest text-white/40 group-hover:text-white/70">
+              <Icon name="calendar" size={13} /> Calendar
+            </span>
+          </Link>
           <div className="text-right">
             <div className="text-xs uppercase tracking-widest text-white/60">Points</div>
             <div className="text-3xl font-black tabular">{progress.points}</div>
@@ -190,7 +199,7 @@ export function Home() {
               variant="primary"
               icon="check"
               onClick={() => {
-                markDailyDoneManually(today, categories);
+                markDayDone(today, today, categories);
                 setConfirmOutside(false);
               }}
             >

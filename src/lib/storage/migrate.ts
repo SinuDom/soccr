@@ -5,6 +5,7 @@ import {
   DEFAULT_PROGRESS,
   DEFAULT_VAULT,
 } from '@/lib/domain/types';
+import { seedCompletedDates } from '@/lib/domain/streak';
 
 // -----------------------------------------------------------------------------
 // Per-user Progress migrations.
@@ -36,6 +37,20 @@ const progressMigrators: ProgressMigrator[] = [
       freezesHeld: Number.isFinite(raw?.freezesHeld) ? raw.freezesHeld : 0,
       cycleNumber: Number.isFinite(raw?.cycleNumber) && raw.cycleNumber >= 1 ? raw.cycleNumber : 1,
       lastCompletedDate: typeof raw?.lastCompletedDate === 'string' ? raw.lastCompletedDate : null,
+    }),
+  },
+  {
+    // v1 → v2: introduce the completed-days set backing the streak calendar.
+    // Seed it from history and the live streak so existing users keep their
+    // real calendar (and their streak survives a later backfill recompute).
+    from: 1,
+    to: 2,
+    migrate: (raw: any) => ({
+      ...raw,
+      schemaVersion: 2,
+      completedDates: Array.isArray(raw?.completedDates)
+        ? raw.completedDates
+        : seedCompletedDates(raw),
     }),
   },
 ];

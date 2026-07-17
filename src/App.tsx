@@ -10,6 +10,7 @@ import { SessionComplete } from '@/screens/SessionComplete';
 import { Library } from '@/screens/Library';
 import { Shop } from '@/screens/Shop';
 import { Settings } from '@/screens/Settings';
+import { StreakCalendar } from '@/screens/StreakCalendar';
 import { ErrorScreen } from '@/screens/ErrorScreen';
 
 export function App() {
@@ -80,6 +81,7 @@ function AppRoutes() {
           <Route path="/session/complete" element={<SessionComplete />} />
           <Route path="/library" element={<Library />} />
           <Route path="/shop" element={<Shop />} />
+          <Route path="/streak" element={<StreakCalendar />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

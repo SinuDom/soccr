@@ -64,6 +64,7 @@ export function mergeVault(a: Vault, b: Vault, maxFreezes: number): Vault {
 /** Per-user merge — same rules as before (max, not sum). */
 export function mergeProgress(a: Progress, b: Progress, maxFreezes: number): Progress {
   const seen = new Set<string>([...a.seenVideoIds, ...b.seenVideoIds]);
+  const completedDates = [...new Set<string>([...(a.completedDates ?? []), ...(b.completedDates ?? [])])].sort();
   const historyMap = new Map<string, HistoryEntry>();
   const key = (h: HistoryEntry) => `${h.date}|${h.mode}|${h.startedAt}`;
   for (const h of [...a.history, ...b.history]) historyMap.set(key(h), h);
@@ -89,6 +90,7 @@ export function mergeProgress(a: Progress, b: Progress, maxFreezes: number): Pro
     seenVideoIds: Array.from(seen),
     cycleNumber: Math.max(a.cycleNumber, b.cycleNumber),
     history,
+    completedDates,
     ...(avatarIcon !== undefined ? { avatarIcon } : {}),
     ...(drillDay !== undefined ? { drillDay } : {}),
   };

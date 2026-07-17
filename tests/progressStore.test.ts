@@ -56,25 +56,53 @@ describe('creditDailyCategory', () => {
   });
 });
 
-describe('markDailyDoneManually', () => {
-  it('credits the streak and marks every category complete without drilling', () => {
-    useProgressStore.getState().markDailyDoneManually(TODAY, CATS);
+describe('markDayDone', () => {
+  it('credits today and marks every category complete without drilling', () => {
+    useProgressStore.getState().markDayDone(TODAY, TODAY, CATS);
     const p = useProgressStore.getState().progress;
     expect(p.currentStreak).toBe(1);
     expect(p.longestStreak).toBe(1);
     expect(p.lastCompletedDate).toBe(TODAY);
+    expect(p.completedDates).toEqual([TODAY]);
     expect(p.drillDay?.completedCategories).toEqual(['ball', 'speed']);
     expect(p.history[p.history.length - 1]).toMatchObject({
       mode: 'manual', completedDaily: true, practiceMs: 0,
     });
   });
 
-  it('is idempotent for the same day — no double streak, no duplicate entry', () => {
-    useProgressStore.getState().markDailyDoneManually(TODAY, CATS);
-    useProgressStore.getState().markDailyDoneManually(TODAY, CATS);
+  it('is idempotent for a day already done — no double streak, no duplicate entry', () => {
+    useProgressStore.getState().markDayDone(TODAY, TODAY, CATS);
+    useProgressStore.getState().markDayDone(TODAY, TODAY, CATS);
     const p = useProgressStore.getState().progress;
     expect(p.currentStreak).toBe(1);
     expect(p.history.filter((h) => h.mode === 'manual')).toHaveLength(1);
+  });
+
+  it('backfills a past day and extends the streak by bridging a gap', () => {
+    // Live streak with a hole: 14th done, 15th missing, 16th (today) done.
+    const twoAgo = '2026-07-14';
+    const yesterday = '2026-07-15';
+    useProgressStore.setState({
+      vault: { vaultVersion: 2, activeUserId: 'leon', users: { leon: { ...DEFAULT_PROGRESS } } },
+      activeUserId: 'leon',
+      progress: { ...DEFAULT_PROGRESS, currentStreak: 1, longestStreak: 2, lastCompletedDate: TODAY, completedDates: [twoAgo, TODAY] },
+    });
+    // Backfill yesterday → 14th, 15th, 16th are now consecutive.
+    useProgressStore.getState().markDayDone(yesterday, TODAY, CATS);
+    const p = useProgressStore.getState().progress;
+    expect(p.completedDates).toEqual([twoAgo, yesterday, TODAY]);
+    expect(p.currentStreak).toBe(3);
+    expect(p.longestStreak).toBe(3);
+    expect(p.lastCompletedDate).toBe(TODAY);
+    // Past days don't touch today's drill/category record.
+    expect(p.drillDay).toBeUndefined();
+  });
+
+  it('ignores future days', () => {
+    useProgressStore.getState().markDayDone('2026-07-20', TODAY, CATS);
+    const p = useProgressStore.getState().progress;
+    expect(p.currentStreak).toBe(0);
+    expect(p.completedDates).toEqual([]);
   });
 });
 

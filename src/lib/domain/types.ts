@@ -87,6 +87,12 @@ export interface Progress {
   seenVideoIds: string[];
   cycleNumber: number;
   history: HistoryEntry[];
+  /**
+   * Every local day (YYYY-MM-DD) the daily goal was met — in-app, marked
+   * manually, or covered by a freeze. Drives the streak calendar and is the
+   * basis for recomputing the streak when past days are backfilled.
+   */
+  completedDates: string[];
   /** Persisted finished-drill progress for the current local day (optional). */
   drillDay?: DrillDayProgress;
   /** Chosen profile-picture filename from the avatar collection (undefined = show initial letter). */
@@ -94,7 +100,7 @@ export interface Progress {
 }
 
 /** Version of the inner per-user Progress object. */
-export const CURRENT_SCHEMA_VERSION = 1;
+export const CURRENT_SCHEMA_VERSION = 2;
 
 /**
  * Vault: the outer, multi-user object stored in localStorage. Each user gets
@@ -125,4 +131,5 @@ export const DEFAULT_PROGRESS: Progress = {
   seenVideoIds: [],
   cycleNumber: 1,
   history: [],
+  completedDates: [],
 };
