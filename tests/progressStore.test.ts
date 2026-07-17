@@ -56,6 +56,28 @@ describe('creditDailyCategory', () => {
   });
 });
 
+describe('markDailyDoneManually', () => {
+  it('credits the streak and marks every category complete without drilling', () => {
+    useProgressStore.getState().markDailyDoneManually(TODAY, CATS);
+    const p = useProgressStore.getState().progress;
+    expect(p.currentStreak).toBe(1);
+    expect(p.longestStreak).toBe(1);
+    expect(p.lastCompletedDate).toBe(TODAY);
+    expect(p.drillDay?.completedCategories).toEqual(['ball', 'speed']);
+    expect(p.history[p.history.length - 1]).toMatchObject({
+      mode: 'manual', completedDaily: true, practiceMs: 0,
+    });
+  });
+
+  it('is idempotent for the same day — no double streak, no duplicate entry', () => {
+    useProgressStore.getState().markDailyDoneManually(TODAY, CATS);
+    useProgressStore.getState().markDailyDoneManually(TODAY, CATS);
+    const p = useProgressStore.getState().progress;
+    expect(p.currentStreak).toBe(1);
+    expect(p.history.filter((h) => h.mode === 'manual')).toHaveLength(1);
+  });
+});
+
 describe('extra-time tally', () => {
   it('bankExtraTime awards points and adds to today\'s extra tally', () => {
     const earned = useProgressStore.getState().bankExtraTime(SETTINGS_FIXTURE, {

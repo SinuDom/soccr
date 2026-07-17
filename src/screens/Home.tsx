@@ -1,10 +1,11 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useProgressStore } from '@/store/progressStore';
 import { useContentStore, getUser } from '@/store/contentStore';
 import { Button } from '@/components/Button';
 import { Icon } from '@/components/Icon';
+import { Modal } from '@/components/Modal';
 import { StreakFlame } from '@/components/StreakFlame';
 import { BottomDock } from '@/components/BottomDock';
 import { toLocalDateString } from '@/lib/domain/streak';
@@ -12,8 +13,10 @@ import { allVideos, dailyGoalProgress, extraMsToday, practiceableCategories } fr
 
 export function Home() {
   const nav = useNavigate();
-  const { progress, activeUserId, freezeConsumedNotice, streakResetNotice, dismissNotices } = useProgressStore();
+  const { progress, activeUserId, freezeConsumedNotice, streakResetNotice, dismissNotices, markDailyDoneManually } =
+    useProgressStore();
   const content = useContentStore((s) => s.content);
+  const [confirmOutside, setConfirmOutside] = useState(false);
   const today = toLocalDateString(new Date());
   const doneToday = progress.lastCompletedDate === today;
   const activeUser = getUser(content, activeUserId);
@@ -116,6 +119,16 @@ export function Home() {
             <span>{formatExtra(extraMs)} extra time today</span>
           </div>
         )}
+        {!doneToday && libSize > 0 && (
+          <button
+            type="button"
+            onClick={() => setConfirmOutside(true)}
+            className="mt-4 inline-flex items-center gap-2 text-sm text-white/60 underline decoration-white/30 underline-offset-4 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pitch-400 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-800 rounded"
+          >
+            <Icon name="check" size={16} />
+            Trained outside the app? Mark today done
+          </button>
+        )}
       </motion.section>
 
       {/* Phones: the Start button lives in the bottom dock, so surface the daily
@@ -163,6 +176,34 @@ export function Home() {
       </footer>
 
       <BottomDock disabled={libSize === 0} />
+
+      <Modal
+        open={confirmOutside}
+        onClose={() => setConfirmOutside(false)}
+        title="Trained outside the app?"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setConfirmOutside(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              icon="check"
+              onClick={() => {
+                markDailyDoneManually(today, categories);
+                setConfirmOutside(false);
+              }}
+            >
+              Mark today done
+            </Button>
+          </>
+        }
+      >
+        <p>
+          This marks today's daily goal as complete and keeps your streak going — use it when you practiced elsewhere,
+          like club training.
+        </p>
+      </Modal>
     </div>
   );
 }

@@ -61,6 +61,14 @@ interface ProgressState {
     entry: Omit<HistoryEntry, 'completedDaily'>,
     overshootMs?: number,
   ) => boolean;
+
+  /**
+   * Credit today's whole daily goal without drilling in the app — for when the
+   * user trained elsewhere (e.g. club training) and wants to keep the streak.
+   * Marks every practiceable category complete for the day and credits the
+   * streak. Idempotent per day.
+   */
+  markDailyDoneManually: (todayISO: string, categories: Category[]) => void;
   bankExtraTime: (settings: Settings, entry: Omit<HistoryEntry, 'pointsEarned'>) => number;
 
   /**
@@ -194,6 +202,27 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
     const history = [...after.history, { ...entry, completedDaily: allDone }];
     commitActive(set, get, { ...after, history });
     return allDone;
+  },
+
+  markDailyDoneManually: (todayISO, categories) => {
+    const p = get().progress;
+    if (p.lastCompletedDate === todayISO) return; // already credited today
+    const practiceable = categories.filter((c) => c.videos.length > 0);
+    let drillDay = drillDayFor(p.drillDay, todayISO);
+    for (const c of practiceable) {
+      drillDay = markCategoryCompleted(drillDay, todayISO, c.id);
+    }
+    const after = applyDailyCompletion({ ...p, drillDay }, todayISO);
+    const entry: HistoryEntry = {
+      date: todayISO,
+      startedAt: Date.now(),
+      mode: 'manual',
+      practiceMs: 0,
+      pointsEarned: 0,
+      videoIds: [],
+      completedDaily: true,
+    };
+    commitActive(set, get, { ...after, history: [...after.history, entry] });
   },
 
   bankExtraTime: (settings, entry) => {
